@@ -1,11 +1,19 @@
-// server.js (or your main server file)
 const express = require('express');
-const app = express();
 const path = require('path');
+const app = express();
 
-app.use(express.static(path.join(__dirname, 'public'))); // Serve static files
+// Define the port variable using process.env.PORT, or fall back to 3000
+const PORT = process.env.PORT || 3000;
 
-// Define a route for the root URL
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Send the index.html file as the main entry point
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html')); // Make sure this is the correct path to your main HTML file
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Start the server and listen on the specified port
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
