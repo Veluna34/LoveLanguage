@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Special Birthday Question Game</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right, #f8c8d7, #f6b8b8);
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 3em;
+      color: #ff80ab;
+      text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+      margin-bottom: 20px;
+      font-family: 'Dancing Script', cursive;
+    }
+
+    .container {
+      margin: 40px auto;
+      max-width: 600px;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    input, button, textarea {
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 2px solid #ff80ab;
+      width: 100%;
+      background-color: #fff;
+      color: #ffffff;
+      transition: all 0.3s ease;
+    }
+
+    input:focus, button:hover, textarea:focus {
+      background-color: #ff80ab;
+      color: rgb(174, 0, 255);
+      border-color: #ff4081;
+    }
+
+    button {
+      background-color: #ff80ab;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .question {
+      font-size: 24px;
+      color: #ff4081;
+      margin-bottom: 20px;
+    }
+
+    .timer {
+      font-size: 24px;
+      margin: 10px 0;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.3);
+    }
+
+    .answer-section {
+      margin-top: 30px;
+      display: none;
+    }
+
+    /* Heart Emoji Styling */
+    #heart-icons {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      font-size: 3em;
+      color: #800080; /* Purple */
+      animation: float 3s ease-in-out infinite, sparkle 1s linear infinite;
+    }
+
+    
+
+    .heart-icon {
+      margin: 0 5px;
+      display: inline-block;
+      text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-20px) scale(1.2); }
+      100% { transform: translateY(0) scale(1); }
+    }
+
+    @keyframes sparkle {
+      0% { text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff; }
+      50% { text-shadow: 0 0 8px #ff00ff, 0 0 16px #ff00ff, 0 0 24px #ff00ff; }
+      100% { text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff; }
+    }
+
+    #hearts-counter {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 3em;
+      color: #ff4081;
+      font-weight: bold;
+    }
+
+    .history {
+      margin-top: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px;
+      border-radius: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      text-align: left;
+    }
+
+    .history h3 {
+      font-size: 22px;
+      color: #ff80ab;
+      margin-bottom: 15px;
+    }
+
+    .history-item {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-bottom: 1px solid #ff4081;
+    }
+
+    .history-item .question {
+      font-weight: bold;
+      color: #ff4081;
+    }
+
+    .history-item .answer {
+      font-style: italic;
+      color: #fff;
+    }
+
+    .turn-status {
+      font-size: 18px;
+      font-weight: bold;
+      color: #ff4081;
+      margin-top: 20px;
+    }
+
+    /* New Section for Custom Question */
+    .custom-question-section {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .custom-question-section input {
+      width: 80%;
+      padding: 10px;
+    }
+
+    .custom-question-section button {
+      background-color: #ff4081;
+      color: #fff;
+      border-radius: 5px;
+      padding: 10px 20px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 768px) {
+        #heart-icons {
+    display: none;
+  }
+  #uploadPic{
+    display: none;
+  }
+}
+
+  /* Style for images in the picture gallery */
+  .uploaded-picture {
+    max-width: 500px; /* Set a maximum width */
+    max-height: 500px; /* Set a maximum height */
+    object-fit: contain; /* Ensure the image maintains its aspect ratio */
+    margin: 10px;
+  }
+
+  /* Style for the picture gallery */
+  .picture-gallery {
+    margin-top: 20px;
+  }
+
+  .picture-gallery h2 {
+    text-align: center;
+  }
+
+  #pictureGalleryList {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .dare-history {
+  margin-top: 20px;
+}
+
+.dare-item {
+  background-color: #f0f0f0;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 5px;
+  font-family: Arial, sans-serif;
+}
+
+.dare-item p {
+  margin: 0;
+      color: #ff4dde;
+}
+
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@300&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Heart Emojis -->
+  <div id="heart-icons">
+    <span class="heart-icon">❤️</span>
+    <span class="heart-icon">❤️</span>
+    <span class="heart-icon">❤️</span>
+  </div>
+
+  <!-- Heart Counter -->
+
+  <div class="container" id="game-container" style="display: none;">
+    <h1>Welcome To Love Language</h1>
+    <p>Answer these questions and share your thoughts with each other!</p>
+
+    <!-- Turn Status Display -->
+    <p id="turnStatus" class="turn-status">It's Player 1's turn</p>
+
+    <div class="question-section">
+      <form id="answerForm">
+        <p id="question" class="question"></p>
+        <textarea 
+          id="answer" 
+          placeholder="Write your answer here..."
+        ></textarea>
+        <button type="submit" id="submitAnswer">Submit Answer</button>
+      </form>
+    </div>
+
+    <!-- Timer section -->
+    <div class="timer-section">
+      <p class="timer" id="timer">Time left: 60:00</p>
+    </div>
+
+  
+
+
+    <div class="random-question-section">
+      <h3>Send a customized Question</h3>
+      <input type="text" id="randomQuestion" placeholder="Enter your random question here" />
+      <button id="submitRandomQuestion" >Submit Random Question</button>
+    </div>
+
+<!-- Dare Section -->
+<div class="dare-section">
+  <h3> Give a Dare  To Your Loved One That You Both Have To Complete</h3>
+  <input type="text" id="dareInput" placeholder="Enter your dare here" />
+  <button id="submitDare">Submit Dare</button>
+</div>
+
+    
+
+    <!-- History Section -->
+    <div class="history">
+      <h3>Previous Questions & Answers</h3>
+      <div id="historyList"></div>
+    </div>
+
+    <div class="dare-history">
+        <h3>Submitted Dares</h3>
+        <div id="dareHistoryList"></div>
+      </div>
+
+    <!-- Answer Section -->
+    <div class="answer-section">
+      <h2>Answer:</h2>
+      <p id="displayAnswer"></p>
+    </div>
+
+    <!-- Picture Upload Section (Updated for Camera) -->
+    <div class="picture-section">
+      <h2>Send A Picture To Your Loved One when you answer a question</h2>
+      <video id="cameraPreview" width="320" height="240" autoplay></video> <!-- Camera preview -->
+      <button id="takePhotoButton">Take Photo</button>
+      <canvas id="photoCanvas" style="display:none;"></canvas> <!-- Hidden canvas to capture image -->
+      <button id="submitPic">Submit Picture</button>
+  </div>
+
+
+
+    <div class="picture-gallery">
+        <h2>Picture Gallery</h2>
+        <div id="pictureGalleryList"></div>
+      </div>
+  </div>
+
+
+
+  <div class="container" id="code-container">
+    <h1>Enter Your Special Code</h1>
+    <label for="code">Please enter your special code to begin:</label>
+    <p>For Player One Code=LOVE123, Player2 Code=FOREVER126</p>
+    <input type="text" id="code" placeholder="Enter special code here" />
+    <button id="codeSubmit">Submit Code</button>
+  </div>
+
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <script src="./js/client.js"></script>
+
+
+  <script>
+    // Connect to the same host and port that served the page
+    const socket = io(); // auto-connects to http://localhost:5500
+
+  
+  socket.on('connect', () => {
+    console.log("Frontend connected to the server");
+  });
+
+  // Define the players object to track player codes
+let players = {
+  player1Code: null,
+  player2Code: null
+};
+
+
+  
+// Initialize an array to store pictures
+let pictures = [];
+const questions = [
+  "What is your favorite memory together?",
+  "What is something you love about your partner?",
+  "What makes you happy when we are together?",
+  "Whats your favorite physical quality about me? Whats your most hated?",
+  "What is something you want to do together in the future?",
+  "What is your biggest insecurity? What are you most confident about?",
+  "What is one question you wished people asked you more?",
+  "What is your dick/tit size",
+  "If you won the lottery what's the first thing you would buy or pay for",
+  "What is your biggest red flag in a partner? Biggest green flag?",
+  "What is your perfect date?",
+  "What is the dirtiest thing you would do with me?",
+  "What is your favorite thing to do when you're alone? When you're out with friends?",
+  "What are your favorite genres of music? Favorite artists/bands?",
+  "What's your favorite position in bed?",
+  "What is your biggest goal for the future?",
+  "What are you most excited to try in bed?",
+  "What do you love the most about your partner? What do you hate the most?",
+  "What's your dirtiest pick-up line?",
+  "What were your first thoughts when we first met?",
+  "How many other relationships have you been with?",
+  "If you have been in other relationships why did they end?",
+  "What is the dirtiest thing you have done?",
+  "Do you like to masturbate if so how often?",
+  "If you could be any animal in the world what would you choose and why?",
+  "If you could choose to have any pet in the world what would it be and why?",
+  "If you could live anywhere in the world where would you choose and why?",
+  "What is your favorite food or type of food?",
+  "What is the freakiest kink you have?",
+  "What is your best skill? What is your worst skill?",
+  "In what public place would you want to fuck him/her the most?",
+  "What is your dream job",
+];
+
+let pictureTaken = false; // Global flag to track picture status
+let currentPicture = null; // Store the captured image data
+
+const dareHistoryList = document.getElementById("dareHistoryList");
+const player1Name = "Player 1";
+const player2Name = "Player 2";
+
+const dareSection = document.querySelector(".dare-section");
+const dareInput = document.getElementById("dareInput");
+const submitDareButton = document.getElementById("submitDare");
+
+const cameraPreview = document.getElementById("cameraPreview");
+const takePhotoButton = document.getElementById("takePhotoButton");
+const photoCanvas = document.getElementById("photoCanvas");
+const pictureGalleryList = document.getElementById("pictureGalleryList");
+let currentQuestionIndex = 0;
+let currentPlayer = 1; // Player 1 or 2
+const specialCodePlayer1 = "LOVE123"; // Player 1's code
+const specialCodePlayer2 = "FOREVER456"; // Player 2's code
+let currentCode = null; // Holds current code entered
+let isCodeCorrect = false;
+let timeLeft = 3600; // 60 minutes in seconds
+let timerInterval;
+let history = []; // To store questions and answers
+let answerSubmittedTime = null;
+
+const questionElem = document.getElementById("question");
+const answerElem = document.getElementById("answer");
+const submitAnswerButton = document.getElementById("submitAnswer");
+const timerElem = document.getElementById("timer");
+const displayAnswerElem = document.getElementById("displayAnswer");
+const answerSection = document.querySelector(".answer-section");
+const codeInput = document.getElementById("code");
+const codeSubmitButton = document.getElementById("codeSubmit");
+const historyList = document.getElementById("historyList");
+const gameContainer = document.getElementById("game-container");
+const codeContainer = document.getElementById("code-container");
+const turnStatusElem = document.getElementById("turnStatus");
+const pictureSection = document.querySelector(".picture-section");
+const uploadPic = document.getElementById("uploadPic");
+const submitPicButton = document.getElementById("submitPic");
+const customQuestionSection = document.querySelector(".custom-question-section");
+const customQuestionInput = document.getElementById("customQuestion");
+const submitCustomQuestionButton = document.getElementById("submitCustomQuestion");
+const photoContext = photoCanvas.getContext('2d');
+
+
+// Initialize the first question
+questionElem.innerText = questions[currentQuestionIndex];
+
+  // 1. PROPERLY GET ALL ELEMENTS FIRST
+  let answerForm = document.getElementById("answerForm");
+  let submitBtn = document.getElementById("submitAnswer");
+  let takePhotoBtn = document.getElementById("takePhotoButton");
+
+
+// Example setup when players join:
+socket.on('assignPlayerCode', (player) => {
+  currentPlayer = player; // This will be either 'player1' or 'player2'
+  console.log("Assigned to", currentPlayer);
+});
+
+
+document.getElementById("submitRandomQuestion").addEventListener("click", () => {
+  const questionInput = document.getElementById("randomQuestion");
+  const newQuestion = questionInput.value.trim();
+  console.log(questions);
+  
+  if (newQuestion) {
+    // Add to local array
+    questions.push(newQuestion);
+    
+    // Send to server to sync with other player
+    socket.emit("addQuestion", {
+      question: newQuestion,
+      player: currentPlayer
+    });
+    
+    // Clear input and show confirmation
+    questionInput.value = "";
+    alert("Question added to the game!");
+    
+    // Optional: display the newly added question
+    console.log("Updated questions:", questions);
+  } else {
+    alert("Please enter a question first!");
+  }
+});
+
+let playerRole = '';  // Player role will be assigned dynamically (Player 1 or Player 2)
+
+
+
+// Toggle button states based on available hearts
+function toggleSubmitButtons() {
+  const randomQuestionButton = document.getElementById('submitRandomQuestion');
+  const dareButton = document.getElementById('submitDare');
+
+}
+
+// When the role is assigned to the player
+socket.on('assignRole', (data) => {
+  playerRole = data.role;
+  console.log('You are ' + playerRole); // Log the role
+});
+
+// Function to submit a random question
+function submitRandomQuestion() {
+  const question = document.getElementById('randomQuestion').value;  // Get the input value
+
+    socket.emit('sendRandomQuestion', { question: question });
+
+    alert(`You sent a question to ${playerRole === 'Player 1' ? 'Player 2' : 'Player 1'}!`);
+  }
+
+  document.getElementById("submitDare").addEventListener("click", function() {
+  const dare = document.getElementById("dareInput").value;
+  if (dare.trim() !== "") {
+    socket.emit("sendDare", { dare: dare });
+    alert("Dare sent!");
+  } else {
+    alert("Please enter a dare first");
+  }
+});
+
+// Listen for the random question from the other player
+socket.on('receiveRandomQuestion', (data) => {
+  alert(`You received a question: ${data.question}`);
+  document.getElementById('receivedQuestion').innerText = `Your question: ${data.question}`;
+});
+
+// Listen for the dare from the other player
+socket.on('receiveDare', (data) => {
+  alert(`You received a dare: ${data.dare}`);
+  document.getElementById('receivedDare').innerText = `Your dare: ${data.dare}`;
+});
+
+
+
+
+
+
+socket.on('turnChanged', (nextPlayerCode) => {
+  console.log('Turn changed to:', nextPlayerCode);  // Check what the server is emitting
+  currentPlayer = nextPlayerCode;
+  updateTurnStatus();
+});
+
+socket.emit('playerAnswered', {
+  player: currentPlayer,
+});
+
+
+
+socket.on('updateTurn', (data) => {
+  currentPlayer = data.currentPlayer;
+  updateTurnStatus(); // update text like “It’s Player 2’s turn”
+});
+
+
+socket.on('newPicture', (playerCode, picture) => {
+  const gallery = document.getElementById('pictureGalleryList');
+  const pictureElement = document.createElement('div');
+  pictureElement.classList.add('uploaded-picture');
+  pictureElement.innerHTML = `<img src="${picture}" alt="Player ${playerCode} Picture">`;
+
+  gallery.appendChild(pictureElement);
+});
+
+
+
+
+
+socket.on('answerSubmitted', (playerCode, answer) => {
+  // Update the answer history for the current player
+  const historyList = document.getElementById('historyList');
+  const historyItem = document.createElement('div');
+  historyItem.classList.add('history-item');
+  historyItem.innerHTML = `<p class="question">Player ${playerCode.charAt(6)}: </p><p class="answer">${answer}</p>`;
+  historyList.appendChild(historyItem);
+});
+
+  // Handle player disconnections
+
+
+
+
+document.getElementById('submitAnswer').addEventListener('click', function () {
+  const answer = document.getElementById('answer').value.trim();
+
+  if (answer === '') {
+    alert('Please write an answer before submitting!');
+    return;
+  }
+
+  // ✅ Add to history (optional)
+  const questionText = document.getElementById('question').innerText;
+  const historyList = document.getElementById('historyList');
+  const entry = document.createElement('div');
+  entry.className = 'history-item';
+  entry.innerHTML = `
+    <div class="question">Player ${currentPlayer} answered: ${questionText}</div>
+    <div class="answer">${answer}</div>
+  `;
+  historyList.appendChild(entry);
+
+  // 🔄 Clear textarea
+  document.getElementById('answer').value = '';
+
+  // 🔁 Switch player turn
+  currentPlayer = currentPlayer === 1 ? 2 : 1;
+  document.getElementById('turnStatus').innerText = `It's Player ${currentPlayer}'s turn`;
+
+  // ✅ Optionally fetch a new question, or show other UI stuff here
+});
+
+
+
+
+
+
+socket.on('updateGameState', (data) => {
+  // Update hearts
+
+  // Update question
+  document.getElementById('current-question').textContent = data.question;
+
+  // Show answer history
+  const historyEl = document.getElementById('answer-history');
+  historyEl.innerHTML = '';
+  data.answers.forEach(entry => {
+    const li = document.createElement('li');
+    li.textContent = `${entry.player}: "${entry.answer}" (Q: ${entry.question})`;
+    historyEl.appendChild(li);
+  });
+
+  // Show uploaded photos
+  const photoEl = document.getElementById('photo-history');
+  photoEl.innerHTML = '';
+  data.photos.forEach(url => {
+    const img = document.createElement('img');
+    img.src = url;
+    img.width = 100;
+    photoEl.appendChild(img);
+  });
+
+  // Optional: custom questions if you want to show those
+});
+
+
+// Check if the user has already entered the correct code
+if (localStorage.getItem("playerCode") && localStorage.getItem("playerCode") !== "null") {
+  isCodeCorrect = true;
+  currentCode = localStorage.getItem("playerCode");
+  currentPlayer = currentCode === specialCodePlayer1 ? 1 : 2;
+  codeContainer.style.display = "none";
+  gameContainer.style.display = "block";
+  updateTurnStatus();
+  startTimer();
+}
+
+function updateDareHistory(dare) {
+  const dareItem = document.createElement("div");
+  dareItem.classList.add("dare-item");
+
+  // Format dare as "Player 1 submitted Dare: [Dare] to Player 2"
+  const dareText = `<p><strong>${player1Name} submitted Dare:</strong> ${dare}</p>`;
+  dareItem.innerHTML = dareText;
+
+  dareHistoryList.appendChild(dareItem);
+}
+
+
+submitDareButton.addEventListener("click", () => {
+  const dare = dareInput.value.trim();
+  if (dare) {
+    // Add the dare to the history section
+    updateDareHistory(dare);
+
+    // Emit dare submission to the server
+    socket.emit('submitDare', { player: currentPlayer, dare });
+
+    // Show confirmation and reset fields
+    alert(`Dare submitted: ${dare}`);
+    dareInput.value = ""; // Clear the input field
+
+    // Switch to the next player's turn
+    socket.emit('nextTurn');
+  } else {
+    alert("Please enter a dare.");
+  }
+});
+
+submitPicButton.addEventListener('click', () => {
+  // Convert the image to a data URL (base64 encoded image)
+  const photoDataUrl = photoCanvas.toDataURL('image/png');
+
+  // Emit the photo to the other player via Socket.IO
+  socket.emit('photoTaken', photoDataUrl);
+
+  // You can also display the photo in the gallery section immediately for local feedback
+  const imgElement = document.createElement('img');
+  imgElement.src = photoDataUrl;
+  imgElement.classList.add('uploaded-picture');
+  document.getElementById('pictureGalleryList').appendChild(imgElement);
+
+  // Optionally, hide the photo section after submission
+  document.querySelector('.picture-section').style.display = 'none';
+});
+
+navigator.mediaDevices.getUserMedia({ video: true })
+  .then((stream) => {
+    // Set the video stream to the video element
+    cameraPreview.srcObject = stream;
+  })
+  .catch((err) => {
+    console.error("Error accessing the camera: ", err);
+  });
+
+  takePhotoButton.addEventListener("click", () => {
+  const context = photoCanvas.getContext("2d");
+  photoCanvas.width = cameraPreview.videoWidth;
+  photoCanvas.height = cameraPreview.videoHeight;
+  context.drawImage(cameraPreview, 0, 0);
+  
+  // Set flag and store picture
+  pictureTaken = true;
+  currentPicture = photoCanvas.toDataURL("image/jpeg");
+  
+  // Enable submit button
+  submitAnswerButton.disabled = false;
+  alert("Picture captured! Now you can submit your answer.");
+});
+
+answerForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    // Validation
+    if (!pictureTaken) {
+      alert("📸 You must take a picture first!");
+      return;
+    }
+}
+)
+
+
+takePhotoButton.addEventListener("click", () => {
+  const context = photoCanvas.getContext("2d");
+  const width = cameraPreview.videoWidth;
+  const height = cameraPreview.videoHeight;
+
+  // Set the canvas size to match the video feed
+  photoCanvas.width = width;
+  photoCanvas.height = height;
+
+  // Draw the current frame from the video on the canvas
+  context.drawImage(cameraPreview, 0, 0, width, height);
+
+  // Convert the image to a data URL
+  const imgData = photoCanvas.toDataURL("image/png");
+
+  // Create an image element and display it in the gallery
+  const img = new Image();
+  img.src = imgData;
+  img.classList.add("uploaded-picture"); // Apply CSS for resizing
+  pictureGalleryList.appendChild(img);
+
+  alert("Picture taken successfully!");
+});
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval); // Stop the timer
+      alert("Time's up! Next player's turn.");
+      socket.emit('nextTurn'); // Switch to the other player's turn
+    } else {
+      timeLeft--;
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      timerElem.innerText = `Time left: ${minutes}:${seconds < 10 ? "0" + seconds : seconds}`;
+    }
+  }, 1000);
+}
+
+function nextTurn() {
+  // Emit the next turn to the server
+  socket.emit('nextTurn');
+}
+
+function updateHistory(question, answer) {
+  const historyItem = document.createElement("div");
+  historyItem.classList.add("history-item");
+  historyItem.innerHTML = `
+    <p class="question">${question}</p>
+    <p class="answer">${answer}</p>
+  `;
+  historyList.appendChild(historyItem);
+}
+
+function handleTurn() {
+  if (currentPlayer === 1) {
+    turnStatusElem.innerText = `Player 1's Turn`;
+  } else {
+    turnStatusElem.innerText = `Player 2's Turn`;
+  }
+}
+
+function updateTurnStatus() {
+  if (currentPlayer === 'player1') {
+    turnStatusElem.innerText = "It's Player 1's turn";
+  } else if (currentPlayer === 'player2') {
+    turnStatusElem.innerText = "It's Player 2's turn";
+  }
+}
+
+
+
+// Get the form element
+const form = document.querySelector("form");
+
+// Add submit event listener (not click)
+form.addEventListener("submit", (event) => {
+  event.preventDefault(); // Prevent default form submission
+  
+  // Picture check
+  if (!pictureTaken) {
+    alert("You must take a picture before submitting your answer!");
+    return;
+  }
+
+  // Answer check
+  
+
+  // Submit data to server
+  socket.emit("submitAnswer", {
+    player: currentPlayer,
+    question: questions[currentQuestionIndex],
+    answer: answer,
+    picture: currentPicture
+  });
+
+  // Update history
+  updateHistory(questions[currentQuestionIndex], answer);
+
+  // Move to next question
+  currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+  document.getElementById('question').innerText = questions[currentQuestionIndex];
+
+  // Reset form
+  pictureTaken = false;
+  currentPicture = null;
+  answerElem.value = "";
+  submitAnswerButton.disabled = true;
+});
+
+   // Reset for next question
+
+    questionElem.innerText = questions[currentQuestionIndex];
+    answerElem.value = ""; // Clear the answer input field
+
+
+codeSubmitButton.addEventListener("click", () => {
+  currentCode = codeInput.value.trim();
+  if (currentCode === specialCodePlayer1 || currentCode === specialCodePlayer2) {
+    localStorage.setItem("playerCode", currentCode);
+    isCodeCorrect = true;
+    codeContainer.style.display = "none";
+    gameContainer.style.display = "block";
+    currentPlayer = currentCode === specialCodePlayer1 ? 1 : 2;
+    updateTurnStatus();
+    startTimer();
+  } else {
+    alert("Invalid code. Please try again.");
+  }
+});
+
+
+
+</script>
+</body>
+</html>
