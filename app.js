@@ -1,13 +1,11 @@
+// server.js (or your main server file)
 const express = require('express');
-const socketIO = require('socket.io');
+const app = express();
 const path = require('path');
 
-const app = express();
-const server = app.listen(5500, () => {
-  console.log('Server running on port 5500');
+app.use(express.static(path.join(__dirname, 'public'))); // Serve static files
+
+// Define a route for the root URL
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html')); // Make sure this is the correct path to your main HTML file
 });
-
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Socket.IO and server routes go here
-// (Keep your existing server logic but remove ALL DOM references)
