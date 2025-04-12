@@ -505,13 +505,79 @@ h3{
     // Initialize the game
     function initGame() {
       socket = io();
+      
+      function customPrompt(message, defaultValue) {
+  return new Promise((resolve) => {
+    const promptContainer = document.createElement('div');
+    promptContainer.style.position = 'fixed';
+    promptContainer.style.top = '0';
+    promptContainer.style.left = '0';
+    promptContainer.style.width = '100%';
+    promptContainer.style.height = '100%';
+    promptContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    promptContainer.style.display = 'flex';
+    promptContainer.style.justifyContent = 'center';
+    promptContainer.style.alignItems = 'center';
+    promptContainer.style.zIndex = '1000';
 
+    const promptBox = document.createElement('div');
+    promptBox.style.backgroundColor = 'white';
+    promptBox.style.padding = '20px';
+    promptBox.style.borderRadius = '5px';
+    promptBox.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.3)';
 
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message;
+    promptBox.appendChild(messageElement);
+
+    const inputElement = document.createElement('input');
+    inputElement.type = 'text';
+    inputElement.value = defaultValue || '';
+    promptBox.appendChild(inputElement);
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.marginTop = '10px';
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.justifyContent = 'flex-end';
+
+    const okButton = document.createElement('button');
+    okButton.textContent = 'OK';
+    okButton.style.marginLeft = '10px';
+    okButton.addEventListener('click', () => {
+      resolve(inputElement.value);
+      document.body.removeChild(promptContainer);
+    });
+    buttonContainer.appendChild(okButton);
+
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.marginLeft = '10px';
+    cancelButton.addEventListener('click', () => {
+      resolve(null);
+      document.body.removeChild(promptContainer);
+    });
+    buttonContainer.appendChild(cancelButton);
+
+    promptBox.appendChild(buttonContainer);
+    promptContainer.appendChild(promptBox);
+    document.body.appendChild(promptContainer);
+
+    inputElement.focus();
+
+    inputElement.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        okButton.click();
+      } else if (event.key === 'Escape') {
+        cancelButton.click();
+      }
+    });
+  });
+}
       
       // Socket connection error handling
       socket.on('connect_error', (err) => {
         console.error('Connection error:', err);
-        alert('Failed to connect to server. Please refresh the page.');
+        showNotification('Failed to connect to server. Please refresh the page.');
       });
 
     createLobbyBtn.addEventListener('click', () => {
@@ -523,12 +589,12 @@ h3{
     }
   });
 
-  window.joinLobby = function (lobbyName) {
-  const password = prompt(`Enter the password for lobby '${lobbyName}':`);
-  const playerName = prompt(`Enter your player name:`);
+  window.joinLobby = async function(lobbyName) {
+  const password = await customPrompt(`Enter the password for lobby '${lobbyName}':`);
+  const playerName = await customPrompt(`Enter your player name:`);
 
   if (!password || !playerName) {
-    alert("Both password and player name are required to join.");
+    showNotification("Both password and player name are required to join.");
     return;
   }
 
@@ -541,22 +607,26 @@ h3{
 
 
 
+
   socket.on('deleteLobbyError', (message) => {
-    alert(message);
+    showNotification(message);
   });
 
 
 
-  window.attemptJoin = (name) => {
-    const password = prompt('Enter password for ' + name);
-    const playerName = playerNameInput.value.trim();
-    if (password && playerName) {
-      joinLobby(name, password, playerName);
-    }
+  window.attemptJoin = async function(name) {
+  const password = await customPrompt('Enter password for ' + name);
+  const playerName = playerNameInput.value.trim();
+  if (password && playerName) {
+    joinLobby(name, password, playerName);
+  } else {
+    showNotification("Both password and player name are required to join.");
   }
+};
+
 
   socket.on('lobbyDeleted', () => {
-  alert('This lobby was deleted.');
+  showNotification('This lobby was deleted.');
   window.location.reload(); // Or redirect to homepage/join screen
 });
 
@@ -579,15 +649,15 @@ h3{
         });
       });
 
-      window.requestDeleteLobby = function (lobbyName) {
-        const password = prompt(`Enter the password to delete lobby '${lobbyName}':`);
+      window.requestDeleteLobby = async function (lobbyName) {
+        const password = await customPrompt(`Enter the password to delete lobby '${lobbyName}':`);
         if (password !== null) {
           socket.emit('deleteLobby', { lobbyName, password });
         }
       };
 
       socket.on('deleteLobbyError', (message) => {
-        alert(message);
+        showNotification(message);
       });
 
   socket.emit('getLobbies');
@@ -666,21 +736,21 @@ window.streak = streak;
 const addQuestionBtn = document.getElementById('add-question');
 const addDareBtn = document.getElementById('add-dare');
 
-addQuestionBtn.addEventListener('click', () => {
-  const question = prompt("Enter your custom question:");
-  if (question && question.trim().length > 0) {
-    socket.emit('submitQuestion', question.trim());
-    showNotification("Custom question added!");
-  }
-});
+        addQuestionBtn.addEventListener('click', async () => {
+          const question = await customPrompt("Enter your custom question:");
+          if (question && question.trim().length > 0) {
+            socket.emit('submitQuestion', question.trim());
+            showNotification("Custom question added!");
+          }
+        });
 
-addDareBtn.addEventListener('click', () => {
-  const dare = prompt("Enter your custom dare:");
-  if (dare && dare.trim().length > 0) {
-    socket.emit('submitDare', dare.trim());
-    showNotification("Custom dare added!");
-  }
-});
+        addDareBtn.addEventListener('click', async () => {
+          const dare = await customPrompt("Enter your custom dare:");
+          if (dare && dare.trim().length > 0) {
+            socket.emit('submitDare', dare.trim());
+            showNotification("Custom dare added!");
+          }
+        });
 
 
 
@@ -739,7 +809,7 @@ document.querySelectorAll('.tab').forEach(tab => {
       });
       
       socket.on('error', (message) => {
-        alert(message);
+        showNotification(message);
       });
     }
     
@@ -795,7 +865,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     updateTimerDisplay();
 
     if (timeLeft === 300 && !warningShown) {
-      alert("⏰ 5 minutes remaining! Finish your turn.");
+      showNotification("⏰ 5 minutes remaining! Finish your turn.");
       warningShown = true;
     }
 
@@ -863,7 +933,7 @@ function updateTimerDisplay() {
     
     function captureImage() {
       if (cameraPreview.style.background === 'black') {
-        alert('No camera available. Please enable camera access.');
+        showCustomAlert('No camera available. Please enable camera access.');
         return;
       }
       
@@ -894,7 +964,7 @@ function updateTimerDisplay() {
       notification.className = 'notification';
       notification.textContent = message;
       document.body.appendChild(notification);
-      setTimeout(() => notification.remove(), 3000);
+      setTimeout(() => notification.remove(), 5000);
     }
     
     // Answer submission
@@ -903,7 +973,7 @@ function updateTimerDisplay() {
       updateStreakDisplay();
 
       if (!isMyTurn || !capturedImage.src) {
-        alert('Please capture an image to submit your response');
+        showCustomAlert('Please capture an image to submit your response');
         return;
       }
       
@@ -925,7 +995,7 @@ function updateTimerDisplay() {
         if (currentRoundType === 'question') {
           const answer = answerText.value.trim();
           if (!answer) {
-            alert('Please enter your answer');
+            showNotification('Please enter your answer');
             submitAnswerBtn.disabled = false;
             submitAnswerBtn.textContent = 'Submit';
             return;
@@ -950,7 +1020,7 @@ function updateTimerDisplay() {
         
       } catch (err) {
         console.error('Error uploading image:', err);
-        alert('Failed to upload image. Please try again.');
+        showNotification('Failed to upload image. Please try again.');
         submitAnswerBtn.disabled = false;
         submitAnswerBtn.textContent = 'Submit';
       }
