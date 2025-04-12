@@ -393,7 +393,6 @@ h3{
     <header>
       <h1>LoveLanguage</h1>
       <div class="subtitle">A game for two hearts to connect</div>
-      <div class="important"><br>you must enter your name weather your creating or joining a lobby</div>
       <div class="player-count">0/2</div>
     </header>
     
@@ -426,6 +425,7 @@ h3{
         <div id="current-prompt" class="section" style="display: none;">
 <!-- Add these near your player count display -->
 <div id="streak-display" class="turn-indicator" style="margin-top: 10px;">Answer Streak: 0</div>
+<p>Timer Will Pause If A Player Closes The Game</p>
 <div id="turn-indicator" class="turn-indicator">Waiting for players...</div>\
 <div id="player-list" class="player-list"></div>  
 <div id="timer-display" class="timer">--:--:--</div>
@@ -523,9 +523,22 @@ h3{
     }
   });
 
-  function joinLobby(lobbyName, password, playerName) {
-    socket.emit('joinLobby', { lobbyName, password, playerName });
+  window.joinLobby = function (lobbyName) {
+  const password = prompt(`Enter the password for lobby '${lobbyName}':`);
+  const playerName = prompt(`Enter your player name:`);
+
+  if (!password || !playerName) {
+    alert("Both password and player name are required to join.");
+    return;
   }
+
+  socket.emit('joinLobby', {
+    lobbyName,
+    password,
+    playerName
+  });
+};
+
 
 
   socket.on('deleteLobbyError', (message) => {
@@ -773,7 +786,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 
     
     function startTurnTimer() {
-  timeLeft = 60 * 60;
+  timeLeft = 120 * 60;
   warningShown = false;
   updateTimerDisplay();
 
