@@ -175,15 +175,105 @@ io.on('connection', (socket) => {
         "What do you love most about me?",
         "If we could go anywhere right now, where would you take me?",
         "What's your favorite thing about our relationship?",
-        "What's something you've always wanted to tell me but haven't?"
+        "What's something you've always wanted to tell me but haven't?",
+        "What is something you wish people asked you more?",
+        "If you won the lottery, what’s the first thing you’d buy or pay for?",
+        "What is your best skill or talent?",
+        "What are your kinks?",
+        "What are you most confident about?",
+        "What is your worst skill?",
+        "What are you least confident about?",
+        "What is the sexiest or freakiest thing you would do to me?",
+        "What are your biggest red flags in a partner?",
+        "What is the craziest thing you have ever done?",
+        "What is your biggest secret?",
+        "What are your green flags in a partner?",
+        "Have you been in other relationships? Why did they end?",
+        "If you could be any animal, what animal and why?",
+        "What do you dislike the most about me?",
+        "What is the sexiest or freakiest thing you’ve ever done?",
+        "What part of my body do you find most attractive?",
+        "What would our future living together look like?",
+        "What part of my body do you find least attractive?",
+        "What is your type physically and personality-wise?",
+        "Would we have dated in highschool together why or why not",
+        "What is the number one item on your bucket list?",
+        "If I was in bed with you right now, what would we be doing?",
+        "What is something about you most people don’t know?",
+        "What’s your love language?",
+        "If you saw me randomly in public how would you have approached me",
+        "What’s your biggest turn on?",
+        "What’s something you've always wanted to try in a relationship?",
+        "Describe your ideal date night with me.",
+        "Have you ever had a crush on someone you shouldn't have?",
+        "What is something about yourself that you're working on?",
+        "What's your go-to flirting move?",
+        "Give me your worst pickup line",
+        "What’s something I do that drives you wild (in a good way)?",
+        "If we had a weekend alone together, what would we do?",
+        "What’s the most spontaneous thing you’ve ever done?",
+        "What compliment do you never get tired of hearing?",
+        "What’s a fantasy you’ve never told anyone before?",
+        "What do you daydream about when you think of me?",
+        "Give me your best pickup line",
+
       ],
+
       dares: [
-        "Send a picture of your favorite place in your home",
+        "Send a picture of where you are",
         "Send a selfie making your best silly face",
         "Send a picture of something that reminds you of me",
         "Send a picture of what you're wearing right now",
-        "Send a picture of your favorite possession"
+        "Send a picture of your favorite possession that you have with you",
+        "Send a risky picture of yourself",
+        "Send a picture of your cutest smile",
+        "Send a picture of your body",
+        "Send a pic of your underwear",
+        "Send a picture of your favorite part of yourself",
+        "Send a picture of what you're doing",
+        "Send a mirror pic",
+        "Send a picture of someone next to you",
+        "Send a picture of your bra or chest",
+        "Send a photo pretending to model something",
+        "Send a picture of your lips in a kissy face",
+        "Send a close-up of just your eyes",
+        "Send a selfie hiding half your face",
+        "Send a photo of your hand making a heart",
+        "Send a photo with a flirty note written on your palm",
+        "Take a blurry picture and make them guess what it is",
+        "Send a picture of your feet (no socks)",
+        "Send a photo of the softest thing nearby",
+        "Snap a mysterious picture with the lights off",
+        "Send a photo as if you're 'about to kiss the camera'",
+        "Snap a picture with a dramatic pose",
+        "Take a picture using a funny filter",
+        "Send a picture of the first thing you saw this morning",
+        "Take a pic of your neck/collarbone",
+        "Send a picture with your fingers counting how much you like me (1–10)",
+        "Send a picture of a secret place in your room",
+        "Send a pic of something sexy written on your body",
+        "Send a picture of your bed setup",
+        "Send a 'meme selfie' ",
+        "Snap a pic with just your shadow",
+        "Send a picture of your reflection in something other than a mirror",
+        "Send a photo with something covering part of your face",
+        "Send a picture that would belong on your dating profile",
+        "Take a 'teasing' over-the-shoulder pic",
+        "Snap a mirror photo like you're sneaking it",
+        "Send a pic of your favorite snack",
+        "Snap a pic of the inside of your fridge",
+        "Send a picture holding up your favorite drink",
+        "Take a picture of the floor under your feet",
+        "Send a picture of the weirdest object in arm’s reach",
+        "Send a selfie with a random item on your head",
+        "Send a picture while pretending to be asleep",
+        "Take a picture from under a blanket",
+        "Send a picture pretending to cry dramatically",
+        "Send a black & white photo of yourself",
+        "Send a photo that makes it look like you're hiding a secret"
       ],
+
+
       history: {
         questions: [],
         dares: []
@@ -200,22 +290,29 @@ io.on('connection', (socket) => {
   function startQuestionRound(lobbyName) {
     const gameState = lobbies[lobbyName]?.gameState;
     if (!gameState || gameState.questions.length === 0) return;
-
+  
     const q = gameState.questions[Math.floor(Math.random() * gameState.questions.length)];
     gameState.currentQuestion = q;
     gameState.currentDare = null;
-
+  
+    // ⏰ Emit this to trigger frontend timer and UI
+    io.to(lobbyName).emit(
+      'turnUpdate',
+      gameState.currentTurn,
+      gameState.players[gameState.currentTurn].name
+    );
+  
     startTimer(lobbyName, () => {
       io.to(gameState.currentTurn).emit('timeout');
       nextTurn(lobbyName);
     });
-
+  
     io.to(lobbyName).emit('newQuestion', {
       question: q,
       currentTurn: gameState.currentTurn
     });
   }
-
+  
   function startDareRound(lobbyName) {
     const gameState = lobbies[lobbyName]?.gameState;
     if (!gameState || gameState.dares.length === 0) return;
