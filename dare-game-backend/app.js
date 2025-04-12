@@ -160,7 +160,6 @@ io.on('connection', (socket) => {
       nextTurn(lobbyName);
     }
 
-    if (lobby.players.length === 0) delete lobbies[lobbyName];
     updateLobbyList();
     console.log(`${playerName} disconnected from ${lobbyName}`);
   });
