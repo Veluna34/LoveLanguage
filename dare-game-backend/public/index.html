@@ -147,6 +147,7 @@
       text-align: center;
       font-size: 1.3rem;
       border: 2px dashed var(--primary-color);
+      margin-top: 40px;
     }
     
     .answer-form {
@@ -307,17 +308,16 @@
 
 .timer {
   font-family: monospace;
-  font-size: 1.5rem;
-  text-align: center;
-  margin: 10px 0;
-  padding: 5px;
-  background-color: #f8f9fa;
-  border-radius: 5px;
-}
+    font-size: 1.5rem;
+    text-align: center;
+    margin: 0px 0;
+    padding: 5px;
+    background-color: #611dee1f;
+    border-radius: 5px;
+    margin-top: 35px;
+  }
 
-.player-list {
-  margin: 10px 0;
-}
+.player-list { margin: -30px 0;}
 
 .player {
   padding: 5px;
@@ -404,21 +404,21 @@
       
       <div id="game-area" class="game-area">
         <div class="section">
-          <h2 class="section-title">Game Controls</h2>
+          <h2 class="section-title">Customize Your Game!</h2>
           <div id="turn-progress" class="turn-progress"></div>
           <div class="controls">
-            <button id="start-question">Ask a Question</button>
-            <button id="start-dare">Give a Dare</button>
-            <button id="add-question">Add Custom Question</button>
-            <button id="add-dare">Add Custom Dare</button>
+            <button id="add-question">Add A Question To The Game</button>
+            <button id="add-dare">Add A Dare To The Game</button>
           </div>
         </div>
         
         <div id="current-prompt" class="section" style="display: none;">
 <!-- Add these near your player count display -->
-<div id="turn-indicator" class="turn-indicator">Waiting for players...</div>
+<div id="streak-display" class="turn-indicator" style="margin-top: 10px;">Answer Streak: 0</div>
+<div id="turn-indicator" class="turn-indicator">Waiting for players...</div>\
+<div id="player-list" class="player-list"></div>  
 <div id="timer-display" class="timer">--:--:--</div>
-<div id="player-list" class="player-list"></div>          <div class="current-prompt" id="prompt-text"></div>
+<div class="current-prompt" id="prompt-text"></div>
           <div class="answer-form">
             <textarea id="answer-text" placeholder="Your answer..." rows="3" style="display: none;"></textarea>
             <video id="camera-preview" class="camera-preview" autoplay playsinline></video>
@@ -452,6 +452,7 @@
   
   <script>
     // DOM elements
+    let streak = 0;
     const lobbyNameInput = document.getElementById('lobby-name');
     const lobbyPasswordInput = document.getElementById('lobby-password');
     const createLobbyBtn = document.getElementById('create-lobby');
@@ -475,6 +476,8 @@
     const questionsHistory = document.getElementById('questions-history');
     const daresHistory = document.getElementById('dares-history');
     const turnProgress = document.getElementById('turn-progress');  
+    let warningShown = false;
+
 
     // Game state
     let socket;
@@ -484,13 +487,15 @@
     let currentRoundType = null; // 'question' or 'dare'
     let turnTimeout;
     let timerInterval;
-    let timeLeft = 120 * 60; // 120 minutes in seconds
+    let timeLeft = 240 * 60; // 120 minutes in seconds
     let currentDareImageUrl = ''; // Stores the dare image for question rounds
     let currentDareCompleted = false;
 
     // Initialize the game
     function initGame() {
       socket = io();
+
+
       
       // Socket connection error handling
       socket.on('connect_error', (err) => {
@@ -540,8 +545,17 @@
     console.log('Joined lobby:', lobbyName);
     // Init gameplay logic here
   });
-      
 
+
+      
+  window.updateStreakDisplay = function () {
+  const streakEl = document.getElementById('streak-display');
+  if (streakEl) {
+    streakEl.textContent = `Answer Streak: ${streak}`;
+  }
+}
+
+window.streak = streak;
       
       // Camera controls
       captureBtn.addEventListener('click', captureImage);
@@ -574,9 +588,10 @@
       });
       
       socket.on('turnUpdate', (currentTurnId, currentPlayer) => {
-        const turnIndicator = document.getElementById('turn-indicator');
-
   isMyTurn = socket.id === currentTurnId;
+  clearTurnTimer();
+  startTurnTimer();
+
   if (turnIndicator) {
     if (isMyTurn) {
       turnIndicator.textContent = "YOUR TURN!";
@@ -586,7 +601,11 @@
       turnIndicator.className = 'turn-indicator their-turn';
     }
   }
+
+  // ✅ THIS is what you’re missing:
+  document.getElementById('current-prompt').style.display = 'block';
 });
+
 
 
 
@@ -658,7 +677,9 @@ document.querySelectorAll('.tab').forEach(tab => {
       });
       
       socket.on('timeout', () => {
-        showNotification("Time's up! Turn skipped.");
+        showNotification("Time's up! Turn skipped And Streak Reset");
+        streak = 0;
+        updateStreakDisplay();
         currentPromptSection.style.display = 'none';
         stopCamera();
       });
@@ -706,42 +727,51 @@ document.querySelectorAll('.tab').forEach(tab => {
         }
       }
     }
+
+    document.getElementById('current-prompt').style.display = 'block';
+
     
-    function startTimer(durationInSeconds) {
+    function startTurnTimer() {
+  timeLeft = 60 * 60;
+  warningShown = false;
+  updateTimerDisplay();
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+
+    if (timeLeft === 300 && !warningShown) {
+      alert("⏰ 5 minutes remaining! Finish your turn.");
+      warningShown = true;
+    }
+
+    if (timeLeft <= 0) {
       clearTurnTimer();
-      timeLeft = durationInSeconds;
-      updateTimerDisplay();
-      
-      timerInterval = setInterval(() => {
-        timeLeft--;
-        updateTimerDisplay();
-        
-        if (timeLeft <= 0) {
-          clearInterval(timerInterval);
-          socket.emit('timeout');
-        }
-      }, 1000);
-      
-      turnTimeout = setTimeout(() => {
-        socket.emit('timeout');
-      }, durationInSeconds * 1000);
+      socket.emit('timeout');
     }
+  }, 1000);
+
+  turnTimeout = setTimeout(() => {
+    clearTurnTimer();
+    socket.emit('timeout');
+  }, timeLeft * 1000);
+}
+
     
-    function updateTimerDisplay() {
-      if (timerDisplay) {
-        const hours = Math.floor(timeLeft / 3600);
-        const minutes = Math.floor((timeLeft % 3600) / 60);
-        const seconds = timeLeft % 60;
-        
-        timerDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
-        if (timeLeft < 300) {
-          timerDisplay.style.color = 'red';
-        } else {
-          timerDisplay.style.color = '';
-        }
-      }
-    }
+function updateTimerDisplay() {
+  const hours = Math.floor(timeLeft / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
+  const seconds = timeLeft % 60;
+
+  timerDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+  if (timeLeft <= 300) {
+    timerDisplay.style.color = 'red';
+  } else {
+    timerDisplay.style.color = '';
+  }
+}
+
     
     function clearTurnTimer() {
       clearTimeout(turnTimeout);
@@ -815,6 +845,9 @@ document.querySelectorAll('.tab').forEach(tab => {
     
     // Answer submission
     async function submitAnswer() {
+      streak++;
+      updateStreakDisplay();
+
       if (!isMyTurn || !capturedImage.src) {
         alert('Please capture an image to submit your response');
         return;
