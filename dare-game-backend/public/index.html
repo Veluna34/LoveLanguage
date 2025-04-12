@@ -3,861 +3,920 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Special Birthday Question Game</title>
+  <title>LoveLanguage</title>
+  <script src="/socket.io/socket.io.js"></script>
   <style>
+    :root {
+      --primary-color: #ff6b9d;
+      --secondary-color: #ff8fab;
+      --light-color: #ffc2d1;
+      --lighter-color: #ffe5ec;
+      --dark-color: #d62d6e;
+      --text-color: #333;
+      --white: #fff;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
     body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(to right, #f8c8d7, #f6b8b8);
-      color: #fff;
-      text-align: center;
+      background-color: var(--lighter-color);
+      color: var(--text-color);
+      min-height: 100vh;
       padding: 20px;
     }
-
-    h1 {
-      font-size: 3em;
-      color: #ff80ab;
-      text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
-      margin-bottom: 20px;
-      font-family: 'Dancing Script', cursive;
-    }
-
+    
     .container {
-      margin: 40px auto;
-      max-width: 600px;
-      padding: 30px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 15px;
-      box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.2);
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: var(--white);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(255, 107, 157, 0.2);
+      overflow: hidden;
     }
-
-    input, button, textarea {
-      padding: 12px;
-      margin: 10px 0;
-      font-size: 16px;
-      border-radius: 8px;
-      border: 2px solid #ff80ab;
-      width: 100%;
-      background-color: #fff;
-      color: #ffffff;
+    
+    header {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    
+    .subtitle {
+      font-size: 1.55rem;
+      opacity: 0.9;
+    }
+    
+    .player-count {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: var(--white);
+      color: var(--primary-color);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    
+    .main-content {
+      padding: 20px;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+      background-color: var(--lighter-color);
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .section-title {
+      color: var(--dark-color);
+      margin-bottom: 15px;
+      font-size: 1.5rem;
+      border-bottom: 2px solid var(--light-color);
+      padding-bottom: 10px;
+    }
+    
+    .player-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    input, textarea, button {
+      padding: 12px 15px;
+      border-radius: 10px;
+      border: 2px solid var(--light-color);
+      font-size: 1rem;
       transition: all 0.3s ease;
     }
-
-    input:focus, button:hover, textarea:focus {
-      background-color: #ff80ab;
-      color: rgb(174, 0, 255);
-      border-color: #ff4081;
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.3);
     }
-
+    
     button {
-      background-color: #ff80ab;
+      background-color: var(--primary-color);
+      color: white;
       border: none;
       cursor: pointer;
-      font-size: 18px;
-    }
-
-    .question {
-      font-size: 24px;
-      color: #ff4081;
-      margin-bottom: 20px;
-    }
-
-    .timer {
-      font-size: 24px;
-      margin: 10px 0;
       font-weight: bold;
-      color: #fff;
-      text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
-
-    .answer-section {
-      margin-top: 30px;
+    
+    button:hover {
+      background-color: var(--dark-color);
+      transform: translateY(-2px);
+    }
+    
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .game-area {
       display: none;
     }
-
-    /* Heart Emoji Styling */
-    #heart-icons {
-      position: absolute;
-      top: 10px;
-      left: 20px;
-      font-size: 3em;
-      color: #800080; /* Purple */
-      animation: float 3s ease-in-out infinite, sparkle 1s linear infinite;
-    }
-
     
-
-    .heart-icon {
-      margin: 0 5px;
-      display: inline-block;
-      text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff;
+    .current-prompt {
+      background-color: var(--white);
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 1.3rem;
+      border: 2px dashed var(--primary-color);
     }
-
-    @keyframes float {
-      0% { transform: translateY(0) scale(1); }
-      50% { transform: translateY(-20px) scale(1.2); }
-      100% { transform: translateY(0) scale(1); }
+    
+    .answer-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
     }
-
-    @keyframes sparkle {
-      0% { text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff; }
-      50% { text-shadow: 0 0 8px #ff00ff, 0 0 16px #ff00ff, 0 0 24px #ff00ff; }
-      100% { text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff; }
+    
+    .camera-preview {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 10px;
+      background-color: #eee;
+      display: none;
     }
-
-    #hearts-counter {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 3em;
-      color: #ff4081;
-      font-weight: bold;
+    
+    .captured-image {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 10px;
+      display: none;
     }
-
-    .history {
-      margin-top: 40px;
-      background: rgba(255, 255, 255, 0.1);
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .history-item {
+      background-color: var(--white);
       padding: 15px;
       border-radius: 10px;
-      max-height: 300px;
-      overflow-y: auto;
-      text-align: left;
-    }
-
-    .history h3 {
-      font-size: 22px;
-      color: #ff80ab;
       margin-bottom: 15px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
     }
-
-    .history-item {
-      margin-bottom: 15px;
-      padding: 10px;
-      border-bottom: 1px solid #ff4081;
-    }
-
-    .history-item .question {
+    
+    .history-question, .history-dare {
       font-weight: bold;
-      color: #ff4081;
+      margin-bottom: 10px;
+      color: var(--dark-color);
     }
-
-    .history-item .answer {
-      font-style: italic;
-      color: #fff;
+    
+    .history-answer {
+      margin-bottom: 10px;
     }
-
-    .turn-status {
-      font-size: 18px;
-      font-weight: bold;
-      color: #ff4081;
-      margin-top: 20px;
-    }
-
-    /* New Section for Custom Question */
-    .custom-question-section {
-      display: none;
-      margin-top: 20px;
-      text-align: center;
-    }
-
-    .custom-question-section input {
-      width: 80%;
-      padding: 10px;
-    }
-
-    .custom-question-section button {
-      background-color: #ff4081;
-      color: #fff;
-      border-radius: 5px;
-      padding: 10px 20px;
-      cursor: pointer;
+    
+    .history-image {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 10px;
       margin-top: 10px;
     }
+    
+    .history-player {
+      font-style: italic;
+      color: var(--secondary-color);
+      margin-top: 10px;
+      text-align: right;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--light-color);
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      font-weight: bold;
+      color: var(--secondary-color);
+      border-bottom: 3px solid transparent;
+    }
+    
+    .tab.active {
+      color: var(--dark-color);
+      border-bottom: 3px solid var(--dark-color);
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
 
-    @media (max-width: 768px) {
-        #heart-icons {
-    display: none;
-  }
-  #uploadPic{
-    display: none;
-  }
+    /* Add these styles */
+.your-turn {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
 }
 
-  /* Style for images in the picture gallery */
-  .uploaded-picture {
-    max-width: 500px; /* Set a maximum width */
-    max-height: 500px; /* Set a maximum height */
-    object-fit: contain; /* Ensure the image maintains its aspect ratio */
-    margin: 10px;
-  }
-
-  /* Style for the picture gallery */
-  .picture-gallery {
-    margin-top: 20px;
-  }
-
-  .picture-gallery h2 {
-    text-align: center;
-  }
-
-  #pictureGalleryList {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .dare-history {
-  margin-top: 20px;
+.their-turn {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
 }
 
-.dare-item {
-  background-color: #f0f0f0;
-  padding: 10px;
-  margin: 5px 0;
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #333;
+  color: white;
+  padding: 15px;
   border-radius: 5px;
-  font-family: Arial, sans-serif;
+  z-index: 1000;
+  animation: slideIn 0.5s forwards;
 }
 
-.dare-item p {
-  margin: 0;
-      color: #ff4dde;
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }
+
+.camera-preview {
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.camera-preview::before {
+  content: "Camera Preview";
+  display: block;
+  text-align: center;
+}
+
+.camera-preview[srcObject]::before {
+  display: none;
+}
+
+.turn-indicator {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.your-turn {
+  background-color: #d4edda;
+  color: #155724;
+  border: 2px solid #c3e6cb;
+}
+
+.their-turn {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 2px solid #ffeeba;
+}
+
+.timer {
+  font-family: monospace;
+  font-size: 1.5rem;
+  text-align: center;
+  margin: 10px 0;
+  padding: 5px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+}
+
+.player-list {
+  margin: 10px 0;
+}
+
+.player {
+  padding: 5px;
+  margin: 2px 0;
+  border-radius: 4px;
+  background-color: #f1f1f1;
+}
+
+.player.you {
+  background-color: #d1ecf1;
+  font-weight: bold;
+}
+
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #333;
+  color: white;
+  padding: 15px;
+  border-radius: 5px;
+  z-index: 1000;
+  animation: slideIn 0.5s forwards;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+    
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 2rem;
+      }
+      
+      .container {
+        border-radius: 0;
+      }
+      
+      .controls {
+        flex-direction: column;
+      }
+
+      .turn-progress.dare {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.turn-progress.question {
+  background-color: #d4edda;
+  color: #155724;
+}
+      
+      button {
+        width: 100%;
+      }
+    }
+
 
   </style>
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@300&display=swap" rel="stylesheet">
 </head>
 <body>
-
-  <!-- Heart Emojis -->
-  <div id="heart-icons">
-    <span class="heart-icon">❤️</span>
-    <span class="heart-icon">❤️</span>
-    <span class="heart-icon">❤️</span>
-  </div>
-
-  <!-- Heart Counter -->
-
-  <div class="container" id="game-container" style="display: none;">
-    <h1>Welcome To Love Language</h1>
-    <p>Answer these questions and share your thoughts with each other!</p>
-
-    <!-- Turn Status Display -->
-    <p id="turnStatus" class="turn-status">It's Player 1's turn</p>
-
-    <div class="question-section">
-      <form id="answerForm">
-        <p id="question" class="question"></p>
-        <textarea 
-          id="answer" 
-          placeholder="Write your answer here..."
-        ></textarea>
-        <button type="submit" id="submitAnswer">Submit Answer</button>
-      </form>
-    </div>
-
-    <!-- Timer section -->
-    <div class="timer-section">
-      <p class="timer" id="timer">Time left: 60:00</p>
-    </div>
-
-  
-
-
-    <div class="random-question-section">
-      <h3>Send a customized Question</h3>
-      <input type="text" id="randomQuestion" placeholder="Enter your random question here" />
-      <button id="submitRandomQuestion" >Submit Random Question</button>
-    </div>
-
-<!-- Dare Section -->
-<div class="dare-section">
-  <h3> Give a Dare  To Your Loved One That You Both Have To Complete</h3>
-  <input type="text" id="dareInput" placeholder="Enter your dare here" />
-  <button id="submitDare">Submit Dare</button>
-</div>
-
+  <div class="container">
+    <header>
+      <h1>LoveLanguage</h1>
+      <div class="subtitle">A game for two hearts to connect</div>
+      <div class="important"><br>you must enter your name weather your creating or joining a lobby</div>
+      <div class="player-count">0/2</div>
+    </header>
     
-
-    <!-- History Section -->
-    <div class="history">
-      <h3>Previous Questions & Answers</h3>
-      <div id="historyList"></div>
-    </div>
-
-    <div class="dare-history">
-        <h3>Submitted Dares</h3>
-        <div id="dareHistoryList"></div>
+    <div class="main-content">
+      <div id="lobby-section" class="section">
+        <h2 class="section-title">Join or Create a Lobby</h2>
+        <div class="player-form">
+          <input type="text" id="lobby-name" placeholder="Lobby name" required>
+          <input type="password" id="lobby-password" placeholder="Lobby password" required>
+          <input type="text" id="player-name" placeholder="Your name" required>
+          <button id="create-lobby">Create Lobby</button>
+        </div>
+        <hr>
+        <h3>Available Lobbies</h3>
+        <div id="available-lobbies"></div>
       </div>
-
-    <!-- Answer Section -->
-    <div class="answer-section">
-      <h2>Answer:</h2>
-      <p id="displayAnswer"></p>
-    </div>
-
-    <!-- Picture Upload Section (Updated for Camera) -->
-    <div class="picture-section">
-      <h2>Send A Picture To Your Loved One when you answer a question</h2>
-      <video id="cameraPreview" width="320" height="240" autoplay></video> <!-- Camera preview -->
-      <button id="takePhotoButton">Take Photo</button>
-      <canvas id="photoCanvas" style="display:none;"></canvas> <!-- Hidden canvas to capture image -->
-      <button id="submitPic">Submit Picture</button>
-  </div>
-
-
-
-    <div class="picture-gallery">
-        <h2>Picture Gallery</h2>
-        <div id="pictureGalleryList"></div>
+      
+      <div id="game-area" class="game-area">
+        <div class="section">
+          <h2 class="section-title">Game Controls</h2>
+          <div id="turn-progress" class="turn-progress"></div>
+          <div class="controls">
+            <button id="start-question">Ask a Question</button>
+            <button id="start-dare">Give a Dare</button>
+            <button id="add-question">Add Custom Question</button>
+            <button id="add-dare">Add Custom Dare</button>
+          </div>
+        </div>
+        
+        <div id="current-prompt" class="section" style="display: none;">
+<!-- Add these near your player count display -->
+<div id="turn-indicator" class="turn-indicator">Waiting for players...</div>
+<div id="timer-display" class="timer">--:--:--</div>
+<div id="player-list" class="player-list"></div>          <div class="current-prompt" id="prompt-text"></div>
+          <div class="answer-form">
+            <textarea id="answer-text" placeholder="Your answer..." rows="3" style="display: none;"></textarea>
+            <video id="camera-preview" class="camera-preview" autoplay playsinline></video>
+            <img id="captured-image" class="captured-image" alt="Captured image">
+            <div class="controls">
+              <button id="capture-btn" style="display: none;">Capture</button>
+              <button id="retake-btn" style="display: none;">Retake</button>
+              <button id="submit-answer" style="display: none;">Submit</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="section">
+          <h2 class="section-title">History</h2>
+          <div class="tabs">
+            <div class="tab active" data-tab="questions">Questions</div>
+            <div class="tab" data-tab="dares">Dares</div>
+          </div>
+          
+          <div id="questions-tab" class="tab-content active">
+            <div id="questions-history"></div>
+          </div>
+          
+          <div id="dares-tab" class="tab-content">
+            <div id="dares-history"></div>
+          </div>
+        </div>
       </div>
+    </div>
   </div>
-
-
-
-  <div class="container" id="code-container">
-    <h1>Enter Your Special Code</h1>
-    <label for="code">Please enter your special code to begin:</label>
-    <p>For Player One Code=LOVE123, Player2 Code=FOREVER126</p>
-    <input type="text" id="code" placeholder="Enter special code here" />
-    <button id="codeSubmit">Submit Code</button>
-  </div>
-
-  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-  <script src="./js/client.js"></script>
-
-
+  
   <script>
-    // Connect to the same host and port that served the page
-    const socket = io(); // auto-connects to http://localhost:5500
+    // DOM elements
+    const lobbyNameInput = document.getElementById('lobby-name');
+    const lobbyPasswordInput = document.getElementById('lobby-password');
+    const createLobbyBtn = document.getElementById('create-lobby');
+    const lobbySection = document.getElementById('lobby-section');
+    const availableLobbies = document.getElementById('available-lobbies');
+    const playerSetup = document.getElementById('player-setup');
+    const gameArea = document.getElementById('game-area');
+    const playerNameInput = document.getElementById('player-name');
+    const joinGameBtn = document.getElementById('join-game');
+    const playerCount = document.querySelector('.player-count');
+    const turnIndicator = document.getElementById('turn-indicator');
+    const timerDisplay = document.getElementById('timer-display');
+    const currentPromptSection = document.getElementById('current-prompt');
+    const promptText = document.getElementById('prompt-text');
+    const answerText = document.getElementById('answer-text');
+    const cameraPreview = document.getElementById('camera-preview');
+    const capturedImage = document.getElementById('captured-image');
+    const captureBtn = document.getElementById('capture-btn');
+    const retakeBtn = document.getElementById('retake-btn');
+    const submitAnswerBtn = document.getElementById('submit-answer');
+    const questionsHistory = document.getElementById('questions-history');
+    const daresHistory = document.getElementById('dares-history');
+    const turnProgress = document.getElementById('turn-progress');  
 
-  
-  socket.on('connect', () => {
-    console.log("Frontend connected to the server");
+    // Game state
+    let socket;
+    let isMyTurn = false;
+    let currentPlayerName = '';
+    let stream;
+    let currentRoundType = null; // 'question' or 'dare'
+    let turnTimeout;
+    let timerInterval;
+    let timeLeft = 120 * 60; // 120 minutes in seconds
+    let currentDareImageUrl = ''; // Stores the dare image for question rounds
+    let currentDareCompleted = false;
+
+    // Initialize the game
+    function initGame() {
+      socket = io();
+      
+      // Socket connection error handling
+      socket.on('connect_error', (err) => {
+        console.error('Connection error:', err);
+        alert('Failed to connect to server. Please refresh the page.');
+      });
+
+    createLobbyBtn.addEventListener('click', () => {
+    const lobbyName = lobbyNameInput.value.trim();
+    const password = lobbyPasswordInput.value.trim();
+    const playerName = playerNameInput.value.trim();
+    if (lobbyName && password && playerName) {
+      socket.emit('createLobby', { lobbyName, password, playerName });
+    }
   });
 
-  // Define the players object to track player codes
-let players = {
-  player1Code: null,
-  player2Code: null
-};
+  function joinLobby(lobbyName, password, playerName) {
+    socket.emit('joinLobby', { lobbyName, password, playerName });
+  }
 
-
-  
-// Initialize an array to store pictures
-let pictures = [];
-const questions = [
-  "What is your favorite memory together?",
-  "What is something you love about your partner?",
-  "What makes you happy when we are together?",
-  "Whats your favorite physical quality about me? Whats your most hated?",
-  "What is something you want to do together in the future?",
-  "What is your biggest insecurity? What are you most confident about?",
-  "What is one question you wished people asked you more?",
-  "What is your dick/tit size",
-  "If you won the lottery what's the first thing you would buy or pay for",
-  "What is your biggest red flag in a partner? Biggest green flag?",
-  "What is your perfect date?",
-  "What is the dirtiest thing you would do with me?",
-  "What is your favorite thing to do when you're alone? When you're out with friends?",
-  "What are your favorite genres of music? Favorite artists/bands?",
-  "What's your favorite position in bed?",
-  "What is your biggest goal for the future?",
-  "What are you most excited to try in bed?",
-  "What do you love the most about your partner? What do you hate the most?",
-  "What's your dirtiest pick-up line?",
-  "What were your first thoughts when we first met?",
-  "How many other relationships have you been with?",
-  "If you have been in other relationships why did they end?",
-  "What is the dirtiest thing you have done?",
-  "Do you like to masturbate if so how often?",
-  "If you could be any animal in the world what would you choose and why?",
-  "If you could choose to have any pet in the world what would it be and why?",
-  "If you could live anywhere in the world where would you choose and why?",
-  "What is your favorite food or type of food?",
-  "What is the freakiest kink you have?",
-  "What is your best skill? What is your worst skill?",
-  "In what public place would you want to fuck him/her the most?",
-  "What is your dream job",
-];
-
-let pictureTaken = false; // Global flag to track picture status
-let currentPicture = null; // Store the captured image data
-
-const dareHistoryList = document.getElementById("dareHistoryList");
-const player1Name = "Player 1";
-const player2Name = "Player 2";
-
-const dareSection = document.querySelector(".dare-section");
-const dareInput = document.getElementById("dareInput");
-const submitDareButton = document.getElementById("submitDare");
-
-const cameraPreview = document.getElementById("cameraPreview");
-const takePhotoButton = document.getElementById("takePhotoButton");
-const photoCanvas = document.getElementById("photoCanvas");
-const pictureGalleryList = document.getElementById("pictureGalleryList");
-let currentQuestionIndex = 0;
-let currentPlayer = 1; // Player 1 or 2
-const specialCodePlayer1 = "LOVE123"; // Player 1's code
-const specialCodePlayer2 = "FOREVER456"; // Player 2's code
-let currentCode = null; // Holds current code entered
-let isCodeCorrect = false;
-let timeLeft = 3600; // 60 minutes in seconds
-let timerInterval;
-let history = []; // To store questions and answers
-let answerSubmittedTime = null;
-
-const questionElem = document.getElementById("question");
-const answerElem = document.getElementById("answer");
-const submitAnswerButton = document.getElementById("submitAnswer");
-const timerElem = document.getElementById("timer");
-const displayAnswerElem = document.getElementById("displayAnswer");
-const answerSection = document.querySelector(".answer-section");
-const codeInput = document.getElementById("code");
-const codeSubmitButton = document.getElementById("codeSubmit");
-const historyList = document.getElementById("historyList");
-const gameContainer = document.getElementById("game-container");
-const codeContainer = document.getElementById("code-container");
-const turnStatusElem = document.getElementById("turnStatus");
-const pictureSection = document.querySelector(".picture-section");
-const uploadPic = document.getElementById("uploadPic");
-const submitPicButton = document.getElementById("submitPic");
-const customQuestionSection = document.querySelector(".custom-question-section");
-const customQuestionInput = document.getElementById("customQuestion");
-const submitCustomQuestionButton = document.getElementById("submitCustomQuestion");
-const photoContext = photoCanvas.getContext('2d');
-
-
-// Initialize the first question
-questionElem.innerText = questions[currentQuestionIndex];
-
-  // 1. PROPERLY GET ALL ELEMENTS FIRST
-  let answerForm = document.getElementById("answerForm");
-  let submitBtn = document.getElementById("submitAnswer");
-  let takePhotoBtn = document.getElementById("takePhotoButton");
-
-
-// Example setup when players join:
-socket.on('assignPlayerCode', (player) => {
-  currentPlayer = player; // This will be either 'player1' or 'player2'
-  console.log("Assigned to", currentPlayer);
-});
-
-
-document.getElementById("submitRandomQuestion").addEventListener("click", () => {
-  const questionInput = document.getElementById("randomQuestion");
-  const newQuestion = questionInput.value.trim();
-  console.log(questions);
-  
-  if (newQuestion) {
-    // Add to local array
-    questions.push(newQuestion);
-    
-    // Send to server to sync with other player
-    socket.emit("addQuestion", {
-      question: newQuestion,
-      player: currentPlayer
+  socket.on('lobbyList', (lobbies) => {
+    availableLobbies.innerHTML = '';
+    lobbies.forEach(lobby => {
+      const div = document.createElement('div');
+      div.innerHTML = `<strong>${lobby.name}</strong> (${lobby.count}/2)
+        <button onclick="attemptJoin('${lobby.name}')">Join</button>`;
+      availableLobbies.appendChild(div);
     });
-    
-    // Clear input and show confirmation
-    questionInput.value = "";
-    alert("Question added to the game!");
-    
-    // Optional: display the newly added question
-    console.log("Updated questions:", questions);
-  } else {
-    alert("Please enter a question first!");
-  }
-});
-
-let playerRole = '';  // Player role will be assigned dynamically (Player 1 or Player 2)
-
-
-
-// Toggle button states based on available hearts
-function toggleSubmitButtons() {
-  const randomQuestionButton = document.getElementById('submitRandomQuestion');
-  const dareButton = document.getElementById('submitDare');
-
-}
-
-// When the role is assigned to the player
-socket.on('assignRole', (data) => {
-  playerRole = data.role;
-  console.log('You are ' + playerRole); // Log the role
-});
-
-// Function to submit a random question
-function submitRandomQuestion() {
-  const question = document.getElementById('randomQuestion').value;  // Get the input value
-
-    socket.emit('sendRandomQuestion', { question: question });
-
-    alert(`You sent a question to ${playerRole === 'Player 1' ? 'Player 2' : 'Player 1'}!`);
-  }
-
-  document.getElementById("submitDare").addEventListener("click", function() {
-  const dare = document.getElementById("dareInput").value;
-  if (dare.trim() !== "") {
-    socket.emit("sendDare", { dare: dare });
-    alert("Dare sent!");
-  } else {
-    alert("Please enter a dare first");
-  }
-});
-
-// Listen for the random question from the other player
-socket.on('receiveRandomQuestion', (data) => {
-  alert(`You received a question: ${data.question}`);
-  document.getElementById('receivedQuestion').innerText = `Your question: ${data.question}`;
-});
-
-// Listen for the dare from the other player
-socket.on('receiveDare', (data) => {
-  alert(`You received a dare: ${data.dare}`);
-  document.getElementById('receivedDare').innerText = `Your dare: ${data.dare}`;
-});
-
-
-
-
-
-
-socket.on('turnChanged', (nextPlayerCode) => {
-  console.log('Turn changed to:', nextPlayerCode);  // Check what the server is emitting
-  currentPlayer = nextPlayerCode;
-  updateTurnStatus();
-});
-
-socket.emit('playerAnswered', {
-  player: currentPlayer,
-});
-
-
-
-socket.on('updateTurn', (data) => {
-  currentPlayer = data.currentPlayer;
-  updateTurnStatus(); // update text like “It’s Player 2’s turn”
-});
-
-
-socket.on('newPicture', (playerCode, picture) => {
-  const gallery = document.getElementById('pictureGalleryList');
-  const pictureElement = document.createElement('div');
-  pictureElement.classList.add('uploaded-picture');
-  pictureElement.innerHTML = `<img src="${picture}" alt="Player ${playerCode} Picture">`;
-
-  gallery.appendChild(pictureElement);
-});
-
-
-
-
-
-socket.on('answerSubmitted', (playerCode, answer) => {
-  // Update the answer history for the current player
-  const historyList = document.getElementById('historyList');
-  const historyItem = document.createElement('div');
-  historyItem.classList.add('history-item');
-  historyItem.innerHTML = `<p class="question">Player ${playerCode.charAt(6)}: </p><p class="answer">${answer}</p>`;
-  historyList.appendChild(historyItem);
-});
-
-  // Handle player disconnections
-
-
-
-
-document.getElementById('submitAnswer').addEventListener('click', function () {
-  const answer = document.getElementById('answer').value.trim();
-
-  if (answer === '') {
-    alert('Please write an answer before submitting!');
-    return;
-  }
-
-  // ✅ Add to history (optional)
-  const questionText = document.getElementById('question').innerText;
-  const historyList = document.getElementById('historyList');
-  const entry = document.createElement('div');
-  entry.className = 'history-item';
-  entry.innerHTML = `
-    <div class="question">Player ${currentPlayer} answered: ${questionText}</div>
-    <div class="answer">${answer}</div>
-  `;
-  historyList.appendChild(entry);
-
-  // 🔄 Clear textarea
-  document.getElementById('answer').value = '';
-
-  // 🔁 Switch player turn
-  currentPlayer = currentPlayer === 1 ? 2 : 1;
-  document.getElementById('turnStatus').innerText = `It's Player ${currentPlayer}'s turn`;
-
-  // ✅ Optionally fetch a new question, or show other UI stuff here
-});
-
-
-
-
-
-
-socket.on('updateGameState', (data) => {
-  // Update hearts
-
-  // Update question
-  document.getElementById('current-question').textContent = data.question;
-
-  // Show answer history
-  const historyEl = document.getElementById('answer-history');
-  historyEl.innerHTML = '';
-  data.answers.forEach(entry => {
-    const li = document.createElement('li');
-    li.textContent = `${entry.player}: "${entry.answer}" (Q: ${entry.question})`;
-    historyEl.appendChild(li);
   });
 
-  // Show uploaded photos
-  const photoEl = document.getElementById('photo-history');
-  photoEl.innerHTML = '';
-  data.photos.forEach(url => {
-    const img = document.createElement('img');
-    img.src = url;
-    img.width = 100;
-    photoEl.appendChild(img);
-  });
-
-  // Optional: custom questions if you want to show those
-});
-
-
-// Check if the user has already entered the correct code
-if (localStorage.getItem("playerCode") && localStorage.getItem("playerCode") !== "null") {
-  isCodeCorrect = true;
-  currentCode = localStorage.getItem("playerCode");
-  currentPlayer = currentCode === specialCodePlayer1 ? 1 : 2;
-  codeContainer.style.display = "none";
-  gameContainer.style.display = "block";
-  updateTurnStatus();
-  startTimer();
-}
-
-function updateDareHistory(dare) {
-  const dareItem = document.createElement("div");
-  dareItem.classList.add("dare-item");
-
-  // Format dare as "Player 1 submitted Dare: [Dare] to Player 2"
-  const dareText = `<p><strong>${player1Name} submitted Dare:</strong> ${dare}</p>`;
-  dareItem.innerHTML = dareText;
-
-  dareHistoryList.appendChild(dareItem);
-}
-
-
-submitDareButton.addEventListener("click", () => {
-  const dare = dareInput.value.trim();
-  if (dare) {
-    // Add the dare to the history section
-    updateDareHistory(dare);
-
-    // Emit dare submission to the server
-    socket.emit('submitDare', { player: currentPlayer, dare });
-
-    // Show confirmation and reset fields
-    alert(`Dare submitted: ${dare}`);
-    dareInput.value = ""; // Clear the input field
-
-    // Switch to the next player's turn
-    socket.emit('nextTurn');
-  } else {
-    alert("Please enter a dare.");
-  }
-});
-
-submitPicButton.addEventListener('click', () => {
-  // Convert the image to a data URL (base64 encoded image)
-  const photoDataUrl = photoCanvas.toDataURL('image/png');
-
-  // Emit the photo to the other player via Socket.IO
-  socket.emit('photoTaken', photoDataUrl);
-
-  // You can also display the photo in the gallery section immediately for local feedback
-  const imgElement = document.createElement('img');
-  imgElement.src = photoDataUrl;
-  imgElement.classList.add('uploaded-picture');
-  document.getElementById('pictureGalleryList').appendChild(imgElement);
-
-  // Optionally, hide the photo section after submission
-  document.querySelector('.picture-section').style.display = 'none';
-});
-
-navigator.mediaDevices.getUserMedia({ video: true })
-  .then((stream) => {
-    // Set the video stream to the video element
-    cameraPreview.srcObject = stream;
-  })
-  .catch((err) => {
-    console.error("Error accessing the camera: ", err);
-  });
-
-  takePhotoButton.addEventListener("click", () => {
-  const context = photoCanvas.getContext("2d");
-  photoCanvas.width = cameraPreview.videoWidth;
-  photoCanvas.height = cameraPreview.videoHeight;
-  context.drawImage(cameraPreview, 0, 0);
-  
-  // Set flag and store picture
-  pictureTaken = true;
-  currentPicture = photoCanvas.toDataURL("image/jpeg");
-  
-  // Enable submit button
-  submitAnswerButton.disabled = false;
-  alert("Picture captured! Now you can submit your answer.");
-});
-
-answerForm.addEventListener("submit", function(e) {
-    e.preventDefault();
-    // Validation
-    if (!pictureTaken) {
-      alert("📸 You must take a picture first!");
-      return;
+  window.attemptJoin = (name) => {
+    const password = prompt('Enter password for ' + name);
+    const playerName = playerNameInput.value.trim();
+    if (password && playerName) {
+      joinLobby(name, password, playerName);
     }
+  }
+
+
+
+  socket.emit('getLobbies');
+  setInterval(() => socket.emit('getLobbies'), 5000);
+
+  socket.on('lobbyJoined', ({ lobbyName, gameState }) => {
+    lobbySection.style.display = 'none';
+    gameArea.style.display = 'block';
+    console.log('Joined lobby:', lobbyName);
+    // Init gameplay logic here
+  });
+      
+
+      
+      // Camera controls
+      captureBtn.addEventListener('click', captureImage);
+      retakeBtn.addEventListener('click', retakeImage);
+      submitAnswerBtn.addEventListener('click', submitAnswer);
+      
+      // Socket event listeners
+      socket.on('connect', () => {
+        console.log('Connected to server with ID:', socket.id);
+      });
+
+      function updatePlayerList(players) {
+  const playerListElement = document.getElementById('player-list');
+  if (playerListElement) {
+    playerListElement.innerHTML = players.map(player => 
+      `<div class="player ${player.id === socket.id ? 'you' : ''}">
+        ${player.name} ${player.id === socket.id ? '(You)' : ''}
+      </div>`
+    ).join('');
+  }
 }
-)
+      
+      socket.on('updatePlayers', (players) => {
+        playerCount.textContent = `${players.length}/2`;
+        updatePlayerList(players);
+      });
+      
+      socket.on('gameState', (state) => {
+        updateHistory(state.history);
+      });
+      
+      socket.on('turnUpdate', (currentTurnId, currentPlayer) => {
+        const turnIndicator = document.getElementById('turn-indicator');
 
-
-takePhotoButton.addEventListener("click", () => {
-  const context = photoCanvas.getContext("2d");
-  const width = cameraPreview.videoWidth;
-  const height = cameraPreview.videoHeight;
-
-  // Set the canvas size to match the video feed
-  photoCanvas.width = width;
-  photoCanvas.height = height;
-
-  // Draw the current frame from the video on the canvas
-  context.drawImage(cameraPreview, 0, 0, width, height);
-
-  // Convert the image to a data URL
-  const imgData = photoCanvas.toDataURL("image/png");
-
-  // Create an image element and display it in the gallery
-  const img = new Image();
-  img.src = imgData;
-  img.classList.add("uploaded-picture"); // Apply CSS for resizing
-  pictureGalleryList.appendChild(img);
-
-  alert("Picture taken successfully!");
-});
-
-function startTimer() {
-  timerInterval = setInterval(() => {
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval); // Stop the timer
-      alert("Time's up! Next player's turn.");
-      socket.emit('nextTurn'); // Switch to the other player's turn
+  isMyTurn = socket.id === currentTurnId;
+  if (turnIndicator) {
+    if (isMyTurn) {
+      turnIndicator.textContent = "YOUR TURN!";
+      turnIndicator.className = 'turn-indicator your-turn';
     } else {
-      timeLeft--;
-      const minutes = Math.floor(timeLeft / 60);
-      const seconds = timeLeft % 60;
-      timerElem.innerText = `Time left: ${minutes}:${seconds < 10 ? "0" + seconds : seconds}`;
+      turnIndicator.textContent = `${currentPlayer}'s turn`;
+      turnIndicator.className = 'turn-indicator their-turn';
     }
-  }, 1000);
-}
-
-function nextTurn() {
-  // Emit the next turn to the server
-  socket.emit('nextTurn');
-}
-
-function updateHistory(question, answer) {
-  const historyItem = document.createElement("div");
-  historyItem.classList.add("history-item");
-  historyItem.innerHTML = `
-    <p class="question">${question}</p>
-    <p class="answer">${answer}</p>
-  `;
-  historyList.appendChild(historyItem);
-}
-
-function handleTurn() {
-  if (currentPlayer === 1) {
-    turnStatusElem.innerText = `Player 1's Turn`;
-  } else {
-    turnStatusElem.innerText = `Player 2's Turn`;
   }
-}
+});
 
-function updateTurnStatus() {
-  if (currentPlayer === 'player1') {
-    turnStatusElem.innerText = "It's Player 1's turn";
-  } else if (currentPlayer === 'player2') {
-    turnStatusElem.innerText = "It's Player 2's turn";
+
+
+const addQuestionBtn = document.getElementById('add-question');
+const addDareBtn = document.getElementById('add-dare');
+
+addQuestionBtn.addEventListener('click', () => {
+  const question = prompt("Enter your custom question:");
+  if (question && question.trim().length > 0) {
+    socket.emit('submitQuestion', question.trim());
+    showNotification("Custom question added!");
   }
-}
+});
 
-
-
-// Get the form element
-const form = document.querySelector("form");
-
-// Add submit event listener (not click)
-form.addEventListener("submit", (event) => {
-  event.preventDefault(); // Prevent default form submission
-  
-  // Picture check
-  if (!pictureTaken) {
-    alert("You must take a picture before submitting your answer!");
-    return;
+addDareBtn.addEventListener('click', () => {
+  const dare = prompt("Enter your custom dare:");
+  if (dare && dare.trim().length > 0) {
+    socket.emit('submitDare', dare.trim());
+    showNotification("Custom dare added!");
   }
+});
 
-  // Answer check
-  
 
-  // Submit data to server
-  socket.emit("submitAnswer", {
-    player: currentPlayer,
-    question: questions[currentQuestionIndex],
-    answer: answer,
-    picture: currentPicture
+
+// Tab switch logic
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    // Remove active class from all tabs and contents
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+    // Add active class to clicked tab and its corresponding content
+    tab.classList.add('active');
+    const targetId = `${tab.dataset.tab}-tab`;
+    document.getElementById(targetId).classList.add('active');
   });
-
-  // Update history
-  updateHistory(questions[currentQuestionIndex], answer);
-
-  // Move to next question
-  currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
-  document.getElementById('question').innerText = questions[currentQuestionIndex];
-
-  // Reset form
-  pictureTaken = false;
-  currentPicture = null;
-  answerElem.value = "";
-  submitAnswerButton.disabled = true;
-});
-
-   // Reset for next question
-
-    questionElem.innerText = questions[currentQuestionIndex];
-    answerElem.value = ""; // Clear the answer input field
-
-
-codeSubmitButton.addEventListener("click", () => {
-  currentCode = codeInput.value.trim();
-  if (currentCode === specialCodePlayer1 || currentCode === specialCodePlayer2) {
-    localStorage.setItem("playerCode", currentCode);
-    isCodeCorrect = true;
-    codeContainer.style.display = "none";
-    gameContainer.style.display = "block";
-    currentPlayer = currentCode === specialCodePlayer1 ? 1 : 2;
-    updateTurnStatus();
-    startTimer();
-  } else {
-    alert("Invalid code. Please try again.");
-  }
 });
 
 
-
+      
+      socket.on('newQuestion', (data) => {
+        currentRoundType = 'question';
+        showPrompt(data.question, true);
+      });
+      
+      socket.on('newDare', (data) => {
+        currentRoundType = 'dare';
+        showPrompt(data.dare, false);
+      });
+      
+      socket.on('roundCompleted', () => {
+        clearTurnTimer();
+        currentPromptSection.style.display = 'none';
+        stopCamera();
+        
+        // If we just completed a dare, automatically start a question
+        if (currentRoundType === 'dare' && isMyTurn) {
+          socket.emit('startRound', 'question');
+        }
+        // If we completed a question, turn automatically switches
+      });
+      
+      socket.on('answerSubmitted', (answer) => {
+        addHistoryItem(answer, true);
+      });
+      
+      socket.on('dareSubmitted', (dare) => {
+        addHistoryItem(dare, false);
+      });
+      
+      socket.on('timeout', () => {
+        showNotification("Time's up! Turn skipped.");
+        currentPromptSection.style.display = 'none';
+        stopCamera();
+      });
+      
+      socket.on('error', (message) => {
+        alert(message);
+      });
+    }
+    
+    function showPrompt(text, isQuestion) {
+      currentPromptSection.style.display = 'block';
+      promptText.textContent = text;
+      
+      if (isQuestion) {
+        // Question round - show text answer and require photo
+        answerText.style.display = 'block';
+        cameraPreview.style.display = 'block';
+        capturedImage.style.display = 'none';
+        captureBtn.style.display = 'block';
+        retakeBtn.style.display = 'none';
+        submitAnswerBtn.style.display = 'none';
+        submitAnswerBtn.textContent = 'Submit Answer';
+      } else {
+        // Dare round - only require photo
+        answerText.style.display = 'none';
+        cameraPreview.style.display = 'block';
+        capturedImage.style.display = 'none';
+        captureBtn.style.display = 'block';
+        retakeBtn.style.display = 'none';
+        submitAnswerBtn.style.display = 'none';
+        submitAnswerBtn.textContent = 'Complete Dare';
+      }
+      
+      startCamera();
+    }
+    
+    function updateTurnUI(currentPlayer) {
+      if (turnIndicator) {
+        if (isMyTurn) {
+          turnIndicator.textContent = "YOUR TURN!";
+          turnIndicator.className = 'turn-indicator your-turn';
+        } else {
+          turnIndicator.textContent = `${currentPlayer}'s turn`;
+          turnIndicator.className = 'turn-indicator their-turn';
+        }
+      }
+    }
+    
+    function startTimer(durationInSeconds) {
+      clearTurnTimer();
+      timeLeft = durationInSeconds;
+      updateTimerDisplay();
+      
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+        
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          socket.emit('timeout');
+        }
+      }, 1000);
+      
+      turnTimeout = setTimeout(() => {
+        socket.emit('timeout');
+      }, durationInSeconds * 1000);
+    }
+    
+    function updateTimerDisplay() {
+      if (timerDisplay) {
+        const hours = Math.floor(timeLeft / 3600);
+        const minutes = Math.floor((timeLeft % 3600) / 60);
+        const seconds = timeLeft % 60;
+        
+        timerDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (timeLeft < 300) {
+          timerDisplay.style.color = 'red';
+        } else {
+          timerDisplay.style.color = '';
+        }
+      }
+    }
+    
+    function clearTurnTimer() {
+      clearTimeout(turnTimeout);
+      clearInterval(timerInterval);
+      if (timerDisplay) {
+        timerDisplay.textContent = '--:--:--';
+        timerDisplay.style.color = '';
+      }
+    }
+    
+    // Camera functions
+    async function startCamera() {
+      try {
+        stopCamera();
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'user' }, 
+          audio: false 
+        });
+        cameraPreview.srcObject = stream;
+        cameraPreview.style.background = 'transparent';
+      } catch (err) {
+        console.error('Error accessing camera:', err);
+        cameraPreview.style.background = 'black';
+        cameraPreview.style.display = 'block';
+        cameraPreview.srcObject = null;
+      }
+    }
+    
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        cameraPreview.srcObject = null;
+      }
+    }
+    
+    function captureImage() {
+      if (cameraPreview.style.background === 'black') {
+        alert('No camera available. Please enable camera access.');
+        return;
+      }
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = cameraPreview.videoWidth;
+      canvas.height = cameraPreview.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+      
+      capturedImage.src = canvas.toDataURL('image/jpeg');
+      capturedImage.style.display = 'block';
+      cameraPreview.style.display = 'none';
+      captureBtn.style.display = 'none';
+      retakeBtn.style.display = 'block';
+      submitAnswerBtn.style.display = 'block';
+    }
+    
+    function retakeImage() {
+      capturedImage.style.display = 'none';
+      cameraPreview.style.display = 'block';
+      captureBtn.style.display = 'block';
+      retakeBtn.style.display = 'none';
+      submitAnswerBtn.style.display = 'none';
+    }
+    
+    function showNotification(message) {
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 3000);
+    }
+    
+    // Answer submission
+    async function submitAnswer() {
+      if (!isMyTurn || !capturedImage.src) {
+        alert('Please capture an image to submit your response');
+        return;
+      }
+      
+      submitAnswerBtn.disabled = true;
+      submitAnswerBtn.textContent = 'Uploading...';
+      
+      try {
+        const blob = await fetch(capturedImage.src).then(res => res.blob());
+        const formData = new FormData();
+        formData.append('image', blob, 'response.jpg');
+        
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (currentRoundType === 'question') {
+          const answer = answerText.value.trim();
+          if (!answer) {
+            alert('Please enter your answer');
+            submitAnswerBtn.disabled = false;
+            submitAnswerBtn.textContent = 'Submit';
+            return;
+          }
+          socket.emit('submitAnswer', { 
+            answer, 
+            imageUrl: data.imageUrl,
+            dareImageUrl: currentDareImageUrl // Include the dare image with the answer
+          });
+          currentDareImageUrl = ''; // Reset after submission
+        } else {
+          // For dares, store the image URL for the upcoming question
+          currentDareImageUrl = data.imageUrl;
+          socket.emit('completeDare', { imageUrl: data.imageUrl });
+        }
+        
+        // Reset form
+        answerText.value = '';
+        capturedImage.src = '';
+        submitAnswerBtn.disabled = false;
+        submitAnswerBtn.textContent = 'Submit';
+        
+      } catch (err) {
+        console.error('Error uploading image:', err);
+        alert('Failed to upload image. Please try again.');
+        submitAnswerBtn.disabled = false;
+        submitAnswerBtn.textContent = 'Submit';
+      }
+    }
+    
+    // History functions
+    function updateHistory(history) {
+      questionsHistory.innerHTML = '';
+      daresHistory.innerHTML = '';
+      
+      history.questions.forEach(item => {
+        addHistoryItem(item, true);
+      });
+      
+      history.dares.forEach(item => {
+        addHistoryItem(item, false);
+      });
+    }
+    
+    function addHistoryItem(item, isQuestion) {
+      const historyElement = isQuestion ? questionsHistory : daresHistory;
+      const itemElement = document.createElement('div');
+      itemElement.className = 'history-item';
+      
+      if (isQuestion) {
+        itemElement.innerHTML = `
+          <div class="history-question">${item.question}</div>
+          <div class="history-answer">${item.answer}</div>
+          ${item.dareImageUrl ? `
+            <div class="dare-proof">Dare Proof:</div>
+            <img src="${item.dareImageUrl}" class="history-image" alt="Dare proof">
+          ` : ''}
+          ${item.imageUrl ? `
+            <div class="answer-proof">Answer Proof:</div>
+            <img src="${item.imageUrl}" class="history-image" alt="Answer proof">
+          ` : ''}
+          <div class="history-player">— ${item.player}</div>
+          <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
+        `;
+      } else {
+        itemElement.innerHTML = `
+          <div class="history-dare">${item.dare}</div>
+          ${item.imageUrl ? `
+            <img src="${item.imageUrl}" class="history-image" alt="Dare proof">
+          ` : ''}
+          <div class="history-player">— ${item.player}</div>
+          <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
+        `;
+      }
+      
+      historyElement.prepend(itemElement);
+    }
+    
+    // Initialize the game when the page loads
+    window.addEventListener('DOMContentLoaded', initGame);
 </script>
-</body>
-</html>

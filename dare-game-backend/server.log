@@ -1,0 +1,134 @@
+Server running on port 3000
+Game state initialized at 2025-04-10T00:04:24.736Z
+New client connected: 1cks2abo-s75Of4gAAAB
+Registration error: TypeError: callback is not a function
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:100:11)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Uncaught Exception: TypeError: callback is not a function
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:135:7)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Registration error: Error: Player 1 is already registered!
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:106:17)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Uncaught Exception: TypeError: callback is not a function
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:135:7)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+New client connected: Ka_tB78IbZ7EzQ0-AAAD
+Registration error: TypeError: callback is not a function
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:116:11)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Uncaught Exception: TypeError: callback is not a function
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:135:7)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Registration error: Error: Player 2 is already registered!
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:122:17)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Uncaught Exception: TypeError: callback is not a function
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:135:7)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Client disconnected: 1cks2abo-s75Of4gAAAB
+New client connected: 7myak-KaJK8Oz3XyAAAF
+New client connected: gC4Dw4hNLo0UbCMgAAAH
+Client disconnected: Ka_tB78IbZ7EzQ0-AAAD
+Client disconnected: 7myak-KaJK8Oz3XyAAAF
+Client disconnected: gC4Dw4hNLo0UbCMgAAAH
+Server running on port 3000
+Game state initialized at 2025-04-10T00:15:10.868Z
+New client connected: c-c0Q523Qnj-cY6NAAAB
+Registration error: TypeError: callback is not a function
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:100:11)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Uncaught Exception: TypeError: callback is not a function
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:135:7)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Registration error: Error: Player 1 is already registered!
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:106:17)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Uncaught Exception: TypeError: callback is not a function
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:135:7)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Client disconnected: c-c0Q523Qnj-cY6NAAAB
+Server running on port 3000
+Game state initialized at 2025-04-10T01:34:33.417Z
+New client connected: wE3C0VpMGL8_XYcHAAAB
+Registration error: Error: Player 1 is already registered!
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:107:17)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Server running on port 3000
+Game state initialized at 2025-04-10T01:40:50.237Z
+New client connected: EZi7bsoMPgqGw4kiAAAB
+Client disconnected: EZi7bsoMPgqGw4kiAAAB
+New client connected: RWEJpIL155J8uZvfAAAD
+Registration error: Error: Player 1 is already registered!
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:107:17)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Registration error: Error: Player 1 is already registered!
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:107:17)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Client disconnected: RWEJpIL155J8uZvfAAAD
+Server running on port 3000
+Game state initialized at 2025-04-10T01:43:34.373Z
+New client connected: 5IGplQdqLTLovwz3AAAB
+Registration error: Error: Player 1 is already registered!
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:121:17)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Registration error: Error: Player 1 is already registered!
+    at Socket.<anonymous> (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\app.js:121:17)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\typed-events.js:69:22)
+    at C:\Users\aiden\OneDrive\Desktop\New folder\dare-game-backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Server running on port 3000
+Game state initialized at 2025-04-10T01:46:14.677Z
+New client connected: KDgrIm-vhK-KL5qTAAAB
+Client disconnected: KDgrIm-vhK-KL5qTAAAB
+New client connected: dYowtrC_otmlG2PzAAAD
+Client disconnected: dYowtrC_otmlG2PzAAAD
