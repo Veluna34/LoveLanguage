@@ -68,26 +68,36 @@ io.on('connection', (socket) => {
     if (!lobby) return socket.emit('error', 'Lobby not found.');
     if (lobby.password !== password) return socket.emit('error', 'Incorrect password.');
     if (lobby.players.length >= 2) return socket.emit('error', 'Lobby full.');
-
+  
     socket.join(lobbyName);
     socket.data.lobby = lobbyName;
     socket.data.playerName = playerName;
     lobby.players.push({ id: socket.id, name: playerName });
-
+  
     const gameState = lobby.gameState;
     gameState.players[socket.id] = { id: socket.id, name: playerName };
-
+  
     io.to(lobbyName).emit('updatePlayers', lobby.players);
-    io.to(socket.id).emit('gameState', gameState);
-    io.to(socket.id).emit('lobbyJoined', { lobbyName, gameState });
-
+  
+    // ✅ Create a safe copy of gameState to emit
+    const { timer, ...safeGameState } = gameState;
+  
+    // ✅ Sanitize players so no circular refs exist
+    safeGameState.players = Object.fromEntries(
+      Object.entries(gameState.players).map(([id, p]) => [id, { id: p.id, name: p.name }])
+    );
+  
+    io.to(socket.id).emit('gameState', safeGameState);
+    io.to(socket.id).emit('lobbyJoined', { lobbyName, gameState: safeGameState });
+  
     if (lobby.players.length === 2) {
       gameState.currentTurn = lobby.players[0].id;
       io.to(lobbyName).emit('turnUpdate', gameState.currentTurn, gameState.players[gameState.currentTurn].name);
       startQuestionRound(lobbyName);
     }
-    
   }
+  
+  
 
   socket.on('submitQuestion', (question) => {
     const lobby = lobbies[socket.data.lobby];
