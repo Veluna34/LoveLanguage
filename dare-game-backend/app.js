@@ -281,6 +281,31 @@ io.on('connection', (socket) => {
     };
   }
 
+  socket.on('deleteLobby', ({ lobbyName, password }) => {
+    const lobby = lobbies[lobbyName];
+    if (!lobby) {
+      socket.emit('deleteLobbyError', 'Lobby not found.');
+      return;
+    }
+  
+    if (lobby.password !== password) {
+      socket.emit('deleteLobbyError', 'Incorrect password.');
+      return;
+    }
+  
+    // Notify players in the lobby (if any)
+    io.to(lobbyName).emit('deleteLobbySuccess', { message: `${lobbyName} was deleted.` });
+  
+    // Clean up
+    delete lobbies[lobbyName];
+    updateLobbyList();
+  });
+  
+
+
+
+  
+
   function startTimer(lobbyName, callback) {
     const gameState = lobbies[lobbyName]?.gameState;
     clearTimeout(gameState?.timer);
