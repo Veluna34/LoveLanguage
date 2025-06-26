@@ -173,9 +173,13 @@ io.on('connection', (socket) => {
   }
 
   function createNewGameState() {
+    
+    
     return {
       players: {},
       currentTurn: null,
+      usedQuestions: {}, // playerID -> [question strings]
+usedDares: {},     // playerID -> [dare strings]
       currentQuestion: null,
       currentDare: null,
       timer: null,
@@ -225,6 +229,27 @@ io.on('connection', (socket) => {
         "What’s a fantasy you’ve never told anyone before?",
         "What do you daydream about when you think of me?",
         "Give me your best pickup line",
+        "What is one question you wish people would ask you more",
+        "What is your favorite food?",
+        "what is your least favorite food?",
+        "One is something you wish people knew more about?",
+        "What does your perfect date night look like?",
+        "If you could go anywhere in the world where would it be?",
+        "What is something very personal you never told me?",
+        "Who is your favorite person in your life?",
+        "If you could date anyone else other than me who would it be?",
+        "Who is your celebrity crush or crushes?",
+        "What is your favorite part about my personality?",
+        "Wat are my green flags?",
+        "What are my red flags?",
+        "What does your dream wedding look like?",
+        "Have you ever loved anyone else?, Why did it end?",
+        "what about yourslef are you the most secure about",
+        "What about yourself are you the most insecure about?",
+        "What do you think your biggest red flag is?",
+        "What do you think your biggest green flag is?",
+        "How many kids do you want to have?",
+        "What is your best pickup line?"
 
       ],
 
@@ -250,36 +275,41 @@ io.on('connection', (socket) => {
         "Send a photo of your hand making a heart",
         "Send a photo with a flirty note written on your palm",
         "Take a blurry picture and make them guess what it is",
-        "Send a picture of your feet (no socks)",
+        "Send a picture of what your wearing on jut your legs",
         "Send a photo of the softest thing nearby",
         "Snap a mysterious picture with the lights off",
         "Send a photo as if you're 'about to kiss the camera'",
         "Snap a picture with a dramatic pose",
-        "Take a picture using a funny filter",
-        "Send a picture of the first thing you saw this morning",
-        "Take a pic of your neck/collarbone",
+        "Take a picture with your funniest face",
+        "Send a picture of the ceiling",
+        "Take a pic of just your shirt",
         "Send a picture with your fingers counting how much you like me (1–10)",
-        "Send a picture of a secret place in your room",
+        "Send a picture of a secret place you like to go to",
         "Send a pic of something sexy written on your body",
-        "Send a picture of your bed setup",
-        "Send a 'meme selfie' ",
+        "Send a picture of your bed",
+        "Send a picture that could be a meme",
         "Snap a pic with just your shadow",
         "Send a picture of your reflection in something other than a mirror",
         "Send a photo with something covering part of your face",
         "Send a picture that would belong on your dating profile",
         "Take a 'teasing' over-the-shoulder pic",
-        "Snap a mirror photo like you're sneaking it",
-        "Send a pic of your favorite snack",
-        "Snap a pic of the inside of your fridge",
+        "Send a sexy picture in public",
+        "Snap a pic of the inside of a fridge",
         "Send a picture holding up your favorite drink",
-        "Take a picture of the floor under your feet",
+        "Take a picture of the floor",
         "Send a picture of the weirdest object in arm’s reach",
         "Send a selfie with a random item on your head",
         "Send a picture while pretending to be asleep",
         "Take a picture from under a blanket",
         "Send a picture pretending to cry dramatically",
-        "Send a black & white photo of yourself",
-        "Send a photo that makes it look like you're hiding a secret"
+        "Send a picture of a note written for me",
+        "Send a photo of an item nobody knows you have",
+        "Send a picture of the backseat of your car",
+        "Send a picture of your car",
+        "Send a picture of your favorite body part on yourself",
+        "Send a picture of what you think my favorite body part on you is",
+        "Draw me and send a picture of it",
+        "Go up to stranger and ask for there number until you get one, send a picture of the number",
       ],
 
 
@@ -321,50 +351,69 @@ io.on('connection', (socket) => {
     gameState.timer = setTimeout(callback, 60 * 60 * 1000);
   }
 
-  function startQuestionRound(lobbyName) {
-    const gameState = lobbies[lobbyName]?.gameState;
-    if (!gameState || gameState.questions.length === 0) return;
-  
-    const q = gameState.questions[Math.floor(Math.random() * gameState.questions.length)];
-    gameState.currentQuestion = q;
-    gameState.currentDare = null;
-  
-    // ⏰ Emit this to trigger frontend timer and UI
-    io.to(lobbyName).emit(
-      'turnUpdate',
-      gameState.currentTurn,
-      gameState.players[gameState.currentTurn].name
-    );
-  
-    startTimer(lobbyName, () => {
-      io.to(gameState.currentTurn).emit('timeout');
-      nextTurn(lobbyName);
-    });
-  
-    io.to(lobbyName).emit('newQuestion', {
-      question: q,
-      currentTurn: gameState.currentTurn
-    });
-  }
-  
-  function startDareRound(lobbyName) {
-    const gameState = lobbies[lobbyName]?.gameState;
-    if (!gameState || gameState.dares.length === 0) return;
+function startQuestionRound(lobbyName) {
+  const gameState = lobbies[lobbyName]?.gameState;
+  if (!gameState || gameState.questions.length === 0) return;
 
-    const d = gameState.dares[Math.floor(Math.random() * gameState.dares.length)];
-    gameState.currentDare = d;
-    gameState.currentQuestion = null;
+  const playerId = gameState.currentTurn;
+  const used = gameState.usedQuestions[playerId] || [];
 
-    startTimer(lobbyName, () => {
-      io.to(gameState.currentTurn).emit('timeout');
-      nextTurn(lobbyName);
-    });
+  const unused = gameState.questions.filter(q => !used.includes(q));
+  if (unused.length === 0) return; // All used up
 
-    io.to(lobbyName).emit('newDare', {
-      dare: d,
-      currentTurn: gameState.currentTurn
-    });
-  }
+  const q = unused[Math.floor(Math.random() * unused.length)];
+  gameState.currentQuestion = q;
+  gameState.currentDare = null;
+
+  if (!gameState.usedQuestions[playerId]) gameState.usedQuestions[playerId] = [];
+  gameState.usedQuestions[playerId].push(q);
+
+  io.to(lobbyName).emit(
+    'turnUpdate',
+    playerId,
+    gameState.players[playerId].name
+  );
+
+  startTimer(lobbyName, () => {
+    io.to(playerId).emit('timeout');
+    nextTurn(lobbyName);
+  });
+
+  io.to(lobbyName).emit('newQuestion', {
+    question: q,
+    currentTurn: playerId
+  });
+}
+
+  
+function startDareRound(lobbyName) {
+  const gameState = lobbies[lobbyName]?.gameState;
+  if (!gameState || gameState.dares.length === 0) return;
+
+  const playerId = gameState.currentTurn;
+  const used = gameState.usedDares[playerId] || [];
+
+  const unused = gameState.dares.filter(d => !used.includes(d));
+  if (unused.length === 0) return; // All used up
+
+  const d = unused[Math.floor(Math.random() * unused.length)];
+  gameState.currentDare = d;
+  gameState.currentQuestion = null;
+
+  if (!gameState.usedDares[playerId]) gameState.usedDares[playerId] = [];
+  gameState.usedDares[playerId].push(d);
+
+  startTimer(lobbyName, () => {
+    io.to(playerId).emit('timeout');
+    nextTurn(lobbyName);
+  });
+
+  io.to(lobbyName).emit('newDare', {
+    dare: d,
+    currentTurn: playerId
+  });
+}
+
 
   function nextTurn(lobbyName) {
     const gameState = lobbies[lobbyName]?.gameState;
