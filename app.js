@@ -9,6 +9,14 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
+// ✅ Serve all static files in the root folder (like index.html, style.css, etc.)
+app.use(express.static(__dirname));
+
+// ✅ Serve index.html at the root URL
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 
 
 
