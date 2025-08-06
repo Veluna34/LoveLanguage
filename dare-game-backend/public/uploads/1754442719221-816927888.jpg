@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoveLanguage</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --primary-color: #ff6b9d;
+      --secondary-color: #ff8fab;
+      --light-color: #ffc2d1;
+      --lighter-color: #ffe5ec;
+      --dark-color: #d62d6e;
+      --text-color: #333;
+      --white: #fff;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: var(--lighter-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: var(--white);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(255, 107, 157, 0.2);
+      overflow: hidden;
+    }
+    
+    header {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    
+    .subtitle {
+      font-size: 1.55rem;
+      opacity: 0.9;
+    }
+
+    .lobby-list{
+      margin-bottom: 10px;    
+    }
+    
+    .player-count {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: var(--white);
+      color: var(--primary-color);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    
+    .main-content {
+      padding: 20px;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+      background-color: var(--lighter-color);
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .section-title {
+      color: var(--dark-color);
+      margin-bottom: 15px;
+      font-size: 1.5rem;
+      border-bottom: 2px solid var(--light-color);
+      padding-bottom: 10px;
+    }
+    
+    .player-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    input, textarea, button {
+      padding: 12px 15px;
+      border-radius: 10px;
+      border: 2px solid var(--light-color);
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.3);
+    }
+    
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background-color: var(--dark-color);
+      transform: translateY(-2px);
+    }
+    
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .game-area {
+      display: none;
+    }
+    
+    .current-prompt {
+      background-color: var(--white);
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 1.3rem;
+      border: 2px dashed var(--primary-color);
+      margin-top: 40px;
+    }
+    
+    .answer-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .camera-preview {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 10px;
+      background-color: #eee;
+      display: none;
+    }
+    
+    .captured-image {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 10px;
+      display: none;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .history-item {
+      background-color: var(--white);
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .history-question, .history-dare {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: var(--dark-color);
+    }
+    
+    .history-answer {
+      margin-bottom: 10px;
+    }
+    
+    .history-image {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    
+    .history-player {
+      font-style: italic;
+      color: var(--secondary-color);
+      margin-top: 10px;
+      text-align: right;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--light-color);
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      font-weight: bold;
+      color: var(--secondary-color);
+      border-bottom: 3px solid transparent;
+    }
+    
+    .tab.active {
+      color: var(--dark-color);
+      border-bottom: 3px solid var(--dark-color);
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Add these styles */
+.your-turn {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+}
+
+.their-turn {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+}
+
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #333;
+  color: white;
+  padding: 15px;
+  border-radius: 5px;
+  z-index: 1000;
+  animation: slideIn 0.5s forwards;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.camera-preview {
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.camera-preview::before {
+  content: "Camera Preview";
+  display: block;
+  text-align: center;
+}
+
+.camera-preview[srcObject]::before {
+  display: none;
+}
+
+.turn-indicator {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.your-turn {
+  background-color: #d4edda;
+  color: #155724;
+  border: 2px solid #c3e6cb;
+}
+
+.their-turn {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 2px solid #ffeeba;
+}
+
+.timer {
+  font-family: monospace;
+    font-size: 1.5rem;
+    text-align: center;
+    margin: 0px 0;
+    padding: 5px;
+    background-color: #611dee1f;
+    border-radius: 5px;
+    margin-top: 35px;
+  }
+
+.player-list { margin: -30px 0;}
+
+.player {
+  padding: 5px;
+  margin: 2px 0;
+  border-radius: 4px;
+  background-color: #f1f1f1;
+}
+
+.player.you {
+  background-color: #d1ecf1;
+  font-weight: bold;
+}
+
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #333;
+  color: white;
+  padding: 15px;
+  border-radius: 5px;
+  z-index: 1000;
+  animation: slideIn 0.5s forwards;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+    
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 2rem;
+      }
+      
+      .container {
+        border-radius: 0;
+      }
+      
+      .controls {
+        flex-direction: column;
+      }
+
+      .turn-progress.dare {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.turn-progress.question {
+  background-color: #d4edda;
+  color: #155724;
+}
+      
+      button {
+        width: 100%;
+      }
+    }
+
+h3{
+  margin-top: 0px;
+}
+
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Truth Or Dare</h1>
+      <div class="subtitle">Answer a question or Complete a Dare</div>
+      <div class="player-count">0/2</div>
+    </header>
+    
+    <div class="main-content">
+      <div id="lobby-section" class="section">
+        <h2 class="section-title">Join or Create a Lobby</h2>
+        <div class="player-form">
+          <input type="text" id="lobby-name" placeholder="Lobby name" required>
+          <input type="password" id="lobby-password" placeholder="Lobby password" required>
+          <input type="text" id="player-name" placeholder="Your name" required>
+          <label style="display: block; margin-top: 5px;">
+  <input type="checkbox" id="make-public">
+  Make this a public lobby (no password)
+</label>
+
+          <button id="create-lobby">Create Lobby</button>
+          <div id="lobby-list" class="lobby-list"></div>
+
+        </div>
+        <hr>
+        <h3>Available Lobbies</h3>
+        <div id="available-lobbies"></div>
+      </div>
+      
+      <div id="game-area" class="game-area">
+        <div class="section">
+          <h2 class="section-title">Customize Your Game!</h2>
+          <div id="turn-progress" class="turn-progress"></div>
+          <div class="controls">
+            <button id="add-question">Add A Question To The Game</button>
+            <button id="add-dare">Add A Dare To The Game</button>
+            <div class="section">
+  <h2 class="section-title">Chat</h2>
+  <div id="chat-messages" style="max-height: 200px; overflow-y: auto; margin-bottom: 10px;"></div>
+  <div style="display: flex; gap: 10px;">
+    <input id="chat-input" type="text" placeholder="Type a message..." style="flex: 1;">
+    <button id="send-chat">Send</button>
+  </div>
+</div>
+
+          </div>
+        </div>
+        
+        <div id="current-prompt" class="section" style="display: none;">
+<!-- Add these near your player count display -->
+<div id="streak-display" class="turn-indicator" style="margin-top: 10px;">Answer Streak: 0</div>
+<p>Timer Will Pause If A Player Closes The Game</p>
+<div id="turn-indicator" class="turn-indicator">Waiting for players...</div>\
+<div id="player-list" class="player-list"></div>  
+<div id="timer-display" class="timer">--:--:--</div>
+<div class="current-prompt" id="prompt-text"></div>
+          <div class="answer-form">
+            <textarea id="answer-text" placeholder="Your answer..." rows="3" style="display: none;"></textarea>
+            <video id="camera-preview" class="camera-preview" autoplay playsinline></video>
+            <img id="captured-image" class="captured-image" alt="Captured image">
+            <div class="controls">
+              <button id="capture-btn" style="display: none;">Capture</button>
+              <button id="retake-btn" style="display: none;">Retake</button>
+              <button id="submit-answer" style="display: none;">Submit</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="section">
+          <h2 class="section-title">History</h2>
+          <div class="tabs">
+            <div class="tab active" data-tab="questions">Questions</div>
+            <div class="tab" data-tab="dares">Dares</div>
+          </div>
+          
+          <div id="questions-tab" class="tab-content active">
+            <div id="questions-history"></div>
+          </div>
+          
+          <div id="dares-tab" class="tab-content">
+            <div id="dares-history"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // DOM elements
+    let streak = 0;
+    const lobbyNameInput = document.getElementById('lobby-name');
+    const lobbyPasswordInput = document.getElementById('lobby-password');
+    const createLobbyBtn = document.getElementById('create-lobby');
+    const lobbySection = document.getElementById('lobby-section');
+    const availableLobbies = document.getElementById('available-lobbies');
+    const playerSetup = document.getElementById('player-setup');
+    const gameArea = document.getElementById('game-area');
+    const playerNameInput = document.getElementById('player-name');
+    const joinGameBtn = document.getElementById('join-game');
+    const playerCount = document.querySelector('.player-count');
+    const turnIndicator = document.getElementById('turn-indicator');
+    const timerDisplay = document.getElementById('timer-display');
+    const currentPromptSection = document.getElementById('current-prompt');
+    const promptText = document.getElementById('prompt-text');
+    const answerText = document.getElementById('answer-text');
+    const cameraPreview = document.getElementById('camera-preview');
+    const capturedImage = document.getElementById('captured-image');
+    const captureBtn = document.getElementById('capture-btn');
+    const retakeBtn = document.getElementById('retake-btn');
+    const submitAnswerBtn = document.getElementById('submit-answer');
+    const questionsHistory = document.getElementById('questions-history');
+    const daresHistory = document.getElementById('dares-history');
+    const turnProgress = document.getElementById('turn-progress');  
+    let warningShown = false;
+
+
+
+
+
+    // Game state
+    let socket;
+    let isMyTurn = false;
+    let currentPlayerName = '';
+    let stream;
+    let currentRoundType = null; // 'question' or 'dare'
+    let turnTimeout;
+    let timerInterval;
+    let timeLeft = 240 * 60; // 120 minutes in seconds
+    let currentDareImageUrl = ''; // Stores the dare image for question rounds
+    let currentDareCompleted = false;
+let timerPaused = false;
+let playerName = '';
+
+const lobbyName = document.getElementById("lobby-name").value;
+const password = document.getElementById("lobby-password").value;
+
+
+
+
+
+
+
+    // Initialize the game
+    function initGame() {
+      socket = io();
+
+
+    
+  const savedName = localStorage.getItem("playerName");
+  const savedLobby = localStorage.getItem("lobbyName");
+  const savedPassword = localStorage.getItem("lobbyPassword");
+
+  // ✅ Only auto-rejoin if values are present
+  if (savedName && savedLobby && savedPassword) {
+    socket.emit("joinLobby", {
+      lobbyName: savedLobby,
+      password: savedPassword,
+      playerName: savedName
+    });
+  }
+
+      
+      function customPrompt(message, defaultValue) {
+  return new Promise((resolve) => {
+    const promptContainer = document.createElement('div');
+    promptContainer.style.position = 'fixed';
+    promptContainer.style.top = '0';
+    promptContainer.style.left = '0';
+    promptContainer.style.width = '100%';
+    promptContainer.style.height = '100%';
+    promptContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    promptContainer.style.display = 'flex';
+    promptContainer.style.justifyContent = 'center';
+    promptContainer.style.alignItems = 'center';
+    promptContainer.style.zIndex = '1000';
+
+    const promptBox = document.createElement('div');
+    promptBox.style.backgroundColor = 'white';
+    promptBox.style.padding = '20px';
+    promptBox.style.borderRadius = '5px';
+    promptBox.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.3)';
+
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message;
+    promptBox.appendChild(messageElement);
+
+    const inputElement = document.createElement('input');
+    inputElement.type = 'text';
+    inputElement.value = defaultValue || '';
+    promptBox.appendChild(inputElement);
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.marginTop = '10px';
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.justifyContent = 'flex-end';
+
+    const okButton = document.createElement('button');
+    okButton.textContent = 'OK';
+    okButton.style.marginLeft = '10px';
+    okButton.addEventListener('click', () => {
+      resolve(inputElement.value);
+      document.body.removeChild(promptContainer);
+    });
+    buttonContainer.appendChild(okButton);
+
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.marginLeft = '10px';
+    cancelButton.addEventListener('click', () => {
+      resolve(null);
+      document.body.removeChild(promptContainer);
+    });
+    buttonContainer.appendChild(cancelButton);
+
+    promptBox.appendChild(buttonContainer);
+    promptContainer.appendChild(promptBox);
+    document.body.appendChild(promptContainer);
+
+    inputElement.focus();
+
+    inputElement.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        okButton.click();
+      } else if (event.key === 'Escape') {
+        cancelButton.click();
+      }
+    });
+  });
+}
+      
+const chatMessages = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+  const sendChatBtn = document.getElementById('send-chat');
+
+  socket.on('chatMessage', ({ playerName, message, timestamp }) => {
+    const msgDiv = document.createElement('div');
+    msgDiv.innerHTML = `<strong>${playerName}:</strong> ${message}`;
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  });
+
+  sendChatBtn.addEventListener('click', sendChat);
+  chatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendChat();
+  });
+
+  function sendChat() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    socket.emit('chatMessage', {
+      lobbyName: socket.data?.lobby || localStorage.getItem("lobbyName"),
+      playerName: socket.data?.playerName || localStorage.getItem("playerName"),
+      message
+    });
+
+    chatInput.value = '';
+  }
+  
+      // Socket connection error handling
+      socket.on('connect_error', (err) => {
+        console.error('Connection error:', err);
+        showNotification('Failed to connect to server. Please refresh the page.');
+      });
+
+    createLobbyBtn.addEventListener('click', () => {
+   const lobbyName = lobbyNameInput.value.trim();
+const password = lobbyPasswordInput.value.trim();
+const playerName = playerNameInput.value.trim();
+const isPublic = document.getElementById('make-public').checked;
+
+if (!lobbyName || !playerName) {
+  showNotification("Lobby name and player name are required.");
+  return;
+}
+
+if (isPublic && password) {
+  showNotification("Public lobbies cannot have a password.");
+  return;
+}
+
+if (!isPublic && !password) {
+  showNotification("Password is required for private lobbies.");
+  return;
+}
+
+socket.emit('createLobby', {
+  lobbyName,
+  password,
+  playerName,
+  isPublic: document.getElementById('make-public').checked
+});
+
+  });
+
+  window.requestDeleteLobby = async function(lobbyName) {
+  const password = await customPrompt(`Enter the password to delete lobby '${lobbyName}':`);
+  if (password !== null) {
+    socket.emit('deleteLobby', { lobbyName, password });
+  }
+};
+
+
+  socket.on('deleteLobbyError', (message) => {
+    showNotification(message);
+  });
+
+
+
+  window.attemptJoin = async function(name) {
+  const password = await customPrompt('Enter password for ' + name);
+  const playerName = playerNameInput.value.trim();
+  if (password && playerName) {
+    joinLobby(name, password, playerName);
+  } else {
+    showNotification("Both password and player name are required to join.");
+  }
+};
+
+
+  socket.on('lobbyDeleted', () => {
+  showNotification('This lobby was deleted.');
+  window.location.reload(); // Or redirect to homepage/join screen
+});
+
+
+
+  const lobbyList = document.getElementById('lobby-list');
+
+socket.on('lobbyList', (lobbies) => {
+  if (!lobbyList) return;
+  lobbyList.innerHTML = '';
+
+  lobbies.forEach(({ name, count, isPublic }) => {
+    const lobbyItem = document.createElement('div');
+    lobbyItem.className = 'lobby-item';
+
+    // 🔥 Conditional join button based on public/private
+    const joinFn = isPublic
+      ? `joinPublicLobby('${name}')`
+      : `joinPrivateLobby('${name}')`;
+
+    lobbyItem.innerHTML = `
+      <span>${name} (${count}/2) ${isPublic ? '[Public]' : '[Private]'}</span>
+      <button onclick="${joinFn}">Join</button>
+      <button onclick="requestDeleteLobby('${name}')" class="delete-btn">Delete</button>
+    `;
+
+    lobbyList.appendChild(lobbyItem);
+  });
+});
+
+
+
+
+
+
+
+
+
+
+
+      socket.on('deleteLobbyError', (message) => {
+        showNotification(message);
+      });
+
+  socket.emit('getLobbies');
+  setInterval(() => socket.emit('getLobbies'), 5000);
+
+  socket.on('lobbyJoined', ({ lobbyName, gameState }) => {
+    lobbySection.style.display = 'none';
+    gameArea.style.display = 'block';
+    console.log('Joined lobby:', lobbyName);
+    // Init gameplay logic here
+  });
+
+
+  // Public lobbies don't need a password
+window.joinPublicLobby = async function(lobbyName) {
+  const playerName = await customPrompt(`Enter your player name:`);
+  if (!playerName) return;
+
+  socket.emit('joinLobby', {
+    lobbyName,
+    password: '', // public lobbies have no password
+    playerName
+  });
+};
+
+// Private lobbies need a password
+window.joinPrivateLobby = async function(lobbyName) {
+  const password = await customPrompt(`Enter the password for lobby '${lobbyName}':`);
+  const playerName = await customPrompt(`Enter your player name:`);
+
+  if (!password || !playerName) {
+    showNotification("Both password and player name are required to join.");
+    return;
+  }
+
+  socket.emit('joinLobby', {
+    lobbyName,
+    password,
+    playerName
+  });
+};
+
+
+  window.updateStreakDisplay = function () {
+  const streakEl = document.getElementById('streak-display');
+  if (streakEl) {
+    streakEl.textContent = `Answer Streak: ${streak}`;
+  }
+}
+
+window.streak = streak;
+      
+      // Camera controls
+      captureBtn.addEventListener('click', captureImage);
+      retakeBtn.addEventListener('click', retakeImage);
+      submitAnswerBtn.addEventListener('click', submitAnswer);
+          console.log('Emitting submitAnswer', { answerText, capturedImage});
+
+
+      
+      // Socket event listeners
+      socket.on('connect', () => {
+        console.log('Connected to server with ID:', socket.id);
+      });
+
+      function updatePlayerList(players) {
+  const playerListElement = document.getElementById('player-list');
+  if (!playerListElement) return;
+
+  playerListElement.innerHTML = players.map(player => 
+    `<div class="player ${player.id === socket.id ? 'you' : ''}">
+      ${player.name} ${player.id === socket.id ? '(You)' : ''}
+    </div>`
+  ).join('');
+}
+
+
+socket.on('turnPaused', ({ message }) => {
+  clearInterval(timerInterval); // pause local timer
+  showNotification(message);
+  turnIndicator.textContent = "⏸ Turn paused. Waiting for reconnection...";
+});
+
+socket.on('resumeTurn', ({ playerName, timeLeft }) => {
+  isMyTurn = true;
+  showNotification(`${playerName}'s turn resumed.`);
+
+  startTurnTimer(timeLeft); // reuse your timer logic
+  turnIndicator.textContent = `🎯 It's your turn!`;
+});
+
+
+
+
+      
+      socket.on('updatePlayers', (players) => {
+        playerCount.textContent = `${players.length}/2`;
+        updatePlayerList(players);
+      });
+      
+      socket.on('gameState', (state) => {
+        updateHistory(state.history);
+      });
+      
+      socket.on('turnUpdate', (currentTurnId, currentPlayer) => {
+  isMyTurn = socket.id === currentTurnId;
+  clearTurnTimer();
+  startTurnTimer();
+
+  if (turnIndicator) {
+    if (isMyTurn) {
+      turnIndicator.textContent = "YOUR TURN!";
+      turnIndicator.className = 'turn-indicator your-turn';
+    } else {
+      turnIndicator.textContent = `${currentPlayer}'s turn`;
+      turnIndicator.className = 'turn-indicator their-turn';
+    }
+  }
+
+  // ✅ THIS is what you’re missing:
+  document.getElementById('current-prompt').style.display = 'block';
+});
+
+
+
+
+const addQuestionBtn = document.getElementById('add-question');
+const addDareBtn = document.getElementById('add-dare');
+
+        addQuestionBtn.addEventListener('click', async () => {
+          const question = await customPrompt("Enter your custom question:");
+          if (question && question.trim().length > 0) {
+            socket.emit('submitQuestion', question.trim());
+            showNotification("Custom question added!");
+          }
+        });
+
+        addDareBtn.addEventListener('click', async () => {
+          const dare = await customPrompt("Enter your custom dare:");
+          if (dare && dare.trim().length > 0) {
+            socket.emit('submitDare', dare.trim());
+            showNotification("Custom dare added!");
+          }
+        });
+
+
+
+// Tab switch logic
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    // Remove active class from all tabs and contents
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+    // Add active class to clicked tab and its corresponding content
+    tab.classList.add('active');
+    const targetId = `${tab.dataset.tab}-tab`;
+    document.getElementById(targetId).classList.add('active');
+  });
+});
+
+
+      
+      socket.on('newQuestion', (data) => {
+        currentRoundType = 'question';
+        showPrompt(data.question, true);
+      });
+      
+      socket.on('newDare', (data) => {
+        currentRoundType = 'dare';
+        showPrompt(data.dare, false);
+      });
+      
+      socket.on('roundCompleted', () => {
+        clearTurnTimer();
+        currentPromptSection.style.display = 'none';
+        stopCamera();
+        
+        // If we just completed a dare, automatically start a question
+        if (currentRoundType === 'dare' && isMyTurn) {
+          socket.emit('startRound', 'question');
+        }
+        // If we completed a question, turn automatically switches
+      });
+      
+      socket.on('answerSubmitted', (answer) => {
+        addHistoryItem(answer, true);
+      });
+      
+      socket.on('dareSubmitted', (dare) => {
+        addHistoryItem(dare, false);
+      });
+      
+      socket.on('timeout', () => {
+        showNotification("Time's up! Turn skipped And Streak Reset");
+        streak = 0;
+        updateStreakDisplay();
+        currentPromptSection.style.display = 'none';
+        stopCamera();
+      });
+      
+      socket.on('error', (message) => {
+        showNotification(message);
+      });
+    }
+    
+    function showPrompt(text, isQuestion) {
+      currentPromptSection.style.display = 'block';
+      promptText.textContent = text;
+      
+      if (isQuestion) {
+        // Question round - show text answer and require photo
+        answerText.style.display = 'block';
+        cameraPreview.style.display = 'block';
+        capturedImage.style.display = 'none';
+        captureBtn.style.display = 'block';
+        retakeBtn.style.display = 'none';
+        submitAnswerBtn.style.display = 'none';
+        submitAnswerBtn.textContent = 'Submit Answer';
+      } else {
+        // Dare round - only require photo
+        answerText.style.display = 'none';
+        cameraPreview.style.display = 'block';
+        capturedImage.style.display = 'none';
+        captureBtn.style.display = 'block';
+        retakeBtn.style.display = 'none';
+        submitAnswerBtn.style.display = 'none';
+        submitAnswerBtn.textContent = 'Complete Dare';
+      }
+      
+      startCamera();
+    }
+    
+    function updateTurnUI(currentPlayer) {
+      if (turnIndicator) {
+        if (isMyTurn) {
+          turnIndicator.textContent = "YOUR TURN!";
+          turnIndicator.className = 'turn-indicator your-turn';
+        } else {
+          turnIndicator.textContent = `${currentPlayer}'s turn`;
+          turnIndicator.className = 'turn-indicator their-turn';
+        }
+      }
+    }
+
+    document.getElementById('current-prompt').style.display = 'block';
+
+    
+    function startTurnTimer() {
+  timeLeft = 120 * 60;
+  warningShown = false;
+  updateTimerDisplay();
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+
+    if (timeLeft === 300 && !warningShown) {
+      showNotification("⏰ 5 minutes remaining! Finish your turn.");
+      warningShown = true;
+    }
+
+    if (timeLeft <= 0) {
+      clearTurnTimer();
+      socket.emit('timeout');
+    }
+  }, 1000);
+
+  turnTimeout = setTimeout(() => {
+    clearTurnTimer();
+    socket.emit('timeout');
+  }, timeLeft * 1000);
+}
+
+    
+function updateTimerDisplay() {
+  const hours = Math.floor(timeLeft / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
+  const seconds = timeLeft % 60;
+
+  timerDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+  if (timeLeft <= 300) {
+    timerDisplay.style.color = 'red';
+  } else {
+    timerDisplay.style.color = '';
+  }
+}
+
+    
+    function clearTurnTimer() {
+      clearTimeout(turnTimeout);
+      clearInterval(timerInterval);
+      if (timerDisplay) {
+        timerDisplay.textContent = '--:--:--';
+        timerDisplay.style.color = '';
+      }
+    }
+    
+    // Camera functions
+    async function startCamera() {
+      try {
+        stopCamera();
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'user' }, 
+          audio: false 
+        });
+        cameraPreview.srcObject = stream;
+        cameraPreview.style.background = 'transparent';
+      } catch (err) {
+        console.error('Error accessing camera:', err);
+        cameraPreview.style.background = 'black';
+        cameraPreview.style.display = 'block';
+        cameraPreview.srcObject = null;
+      }
+    }
+    
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        cameraPreview.srcObject = null;
+      }
+    }
+    
+    function captureImage() {
+      if (cameraPreview.style.background === 'black') {
+        showCustomAlert('No camera available. Please enable camera access.');
+        return;
+      }
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = cameraPreview.videoWidth;
+      canvas.height = cameraPreview.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+      
+      capturedImage.src = canvas.toDataURL('image/jpeg');
+      capturedImage.style.display = 'block';
+      cameraPreview.style.display = 'none';
+      captureBtn.style.display = 'none';
+      retakeBtn.style.display = 'block';
+      submitAnswerBtn.style.display = 'block';
+    }
+    
+    function retakeImage() {
+      capturedImage.style.display = 'none';
+      cameraPreview.style.display = 'block';
+      captureBtn.style.display = 'block';
+      retakeBtn.style.display = 'none';
+      submitAnswerBtn.style.display = 'none';
+    }
+    
+    function showNotification(message) {
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+    }
+    
+    // Answer submission
+    async function submitAnswer() {
+      streak++;
+      updateStreakDisplay();
+
+      if (!isMyTurn || !capturedImage.src) {
+        showCustomAlert('Please capture an image to submit your response');
+        return;
+      }
+      
+      submitAnswerBtn.disabled = true;
+      submitAnswerBtn.textContent = 'Uploading...';
+      
+      try {
+        const blob = await fetch(capturedImage.src).then(res => res.blob());
+        const formData = new FormData();
+        formData.append('image', blob, 'response.jpg');
+        
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (currentRoundType === 'question') {
+          const answer = answerText.value.trim();
+          if (!answer) {
+            showNotification('Please enter your answer');
+            submitAnswerBtn.disabled = false;
+            submitAnswerBtn.textContent = 'Submit';
+            return;
+          }
+          socket.emit('submitAnswer', { 
+            answer, 
+            imageUrl: data.imageUrl,
+            dareImageUrl: currentDareImageUrl // Include the dare image with the answer
+          });
+          currentDareImageUrl = ''; // Reset after submission
+        } else {
+          // For dares, store the image URL for the upcoming question
+          currentDareImageUrl = data.imageUrl;
+          socket.emit('completeDare', { imageUrl: data.imageUrl });
+        }
+        
+        // Reset form
+        answerText.value = '';
+        capturedImage.src = '';
+        submitAnswerBtn.disabled = false;
+        submitAnswerBtn.textContent = 'Submit';
+        
+      } catch (err) {
+        console.error('Error uploading image:', err);
+        showNotification('Failed to upload image. Please try again.');
+        submitAnswerBtn.disabled = false;
+        submitAnswerBtn.textContent = 'Submit';
+      }
+    }
+    
+    // History functions
+    function updateHistory(history) {
+      questionsHistory.innerHTML = '';
+      daresHistory.innerHTML = '';
+      
+      history.questions.forEach(item => {
+        addHistoryItem(item, true);
+      });
+      
+      history.dares.forEach(item => {
+        addHistoryItem(item, false);
+      });
+    }
+    
+    function addHistoryItem(item, isQuestion) {
+      const historyElement = isQuestion ? questionsHistory : daresHistory;
+      const itemElement = document.createElement('div');
+      itemElement.className = 'history-item';
+      
+      if (isQuestion) {
+        itemElement.innerHTML = `
+          <div class="history-question">${item.question}</div>
+          <div class="history-answer">${item.answer}</div>
+          ${item.dareImageUrl ? `
+            <div class="dare-proof">Dare Proof:</div>
+            <img src="${item.dareImageUrl}" class="history-image" alt="Dare proof">
+          ` : ''}
+          ${item.imageUrl ? `
+            <div class="answer-proof">Answer Proof:</div>
+            <img src="${item.imageUrl}" class="history-image" alt="Answer proof">
+          ` : ''}
+          <div class="history-player">— ${item.player}</div>
+          <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
+        `;
+      } else {
+        itemElement.innerHTML = `
+          <div class="history-dare">${item.dare}</div>
+          ${item.imageUrl ? `
+            <img src="${item.imageUrl}" class="history-image" alt="Dare proof">
+          ` : ''}
+          <div class="history-player">— ${item.player}</div>
+          <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
+        `;
+      }
+      
+      historyElement.prepend(itemElement);
+    }
+
+    
+
+
+    
+    // Initialize the game when the page loads
+    window.addEventListener('DOMContentLoaded', initGame);
+</script>

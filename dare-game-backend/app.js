@@ -9,6 +9,9 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
+
+
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = 'public/uploads';
@@ -34,147 +37,325 @@ app.post('/upload', upload.single('image'), (req, res) => {
 
 const lobbies = {}; // { lobbyName: { password, players: [], gameState: {} } }
 
-io.on('connection', (socket) => {
-  console.log('New connection:', socket.id);
 
-  socket.on('createLobby', ({ lobbyName, password, playerName }) => {
-    if (lobbies[lobbyName]) {
-      socket.emit('error', 'Lobby name already taken.');
+io.on('connection', (socket) => {
+  console.log('🧩 NEW CONNECTION:', socket.id);
+
+  socket.emit('lobbyCreatedDebug', { success: true });
+
+  console.log("📥 Chat handler registered for:", socket.id);
+
+
+  socket.on('chatMessage', ({ lobbyName, playerName, message }) => {
+    if (!lobbies[lobbyName]) {
+      console.warn("⚠️ Invalid lobby:", lobbyName);
       return;
     }
-    lobbies[lobbyName] = {
-      password,
-      players: [],
-      gameState: createNewGameState()
+
+    const entry = {
+      playerName,
+      message,
+      timestamp: Date.now()
     };
-    joinLobby(socket, lobbyName, password, playerName);
-    updateLobbyList();
+
+    console.log("📡 Broadcasting to", lobbyName, entry); // ✅ This now works
+
+    // Save to game state history
+    lobbies[lobbyName].gameState.chat ||= [];
+    lobbies[lobbyName].gameState.chat.push(entry);
+
+    // Send to all sockets in the room
+    io.to(lobbyName).emit('chatMessage', entry);
   });
 
-  socket.on('getLobbies', () => {
-    const lobbyList = Object.entries(lobbies).map(([name, lobby]) => ({
-      name,
-      count: lobby.players.length
-    }));
-    socket.emit('lobbyList', lobbyList);
-  });
 
-  socket.on('joinLobby', ({ lobbyName, password, playerName }) => {
-    joinLobby(socket, lobbyName, password, playerName);
-  });
+    
 
-  function joinLobby(socket, lobbyName, password, playerName) {
-    const lobby = lobbies[lobbyName];
-    if (!lobby) return socket.emit('error', 'Lobby not found.');
-    if (lobby.password !== password) return socket.emit('error', 'Incorrect password.');
-    if (lobby.players.length >= 2) return socket.emit('error', 'Lobby full.');
-  
-    socket.join(lobbyName);
-    socket.data.lobby = lobbyName;
-    socket.data.playerName = playerName;
-    lobby.players.push({ id: socket.id, name: playerName });
-  
-    const gameState = lobby.gameState;
-    gameState.players[socket.id] = { id: socket.id, name: playerName };
-  
-    io.to(lobbyName).emit('updatePlayers', lobby.players);
-  
-    // ✅ Create a safe copy of gameState to emit
-    const { timer, ...safeGameState } = gameState;
-  
-    // ✅ Sanitize players so no circular refs exist
-    safeGameState.players = Object.fromEntries(
-      Object.entries(gameState.players).map(([id, p]) => [id, { id: p.id, name: p.name }])
-    );
-  
-    io.to(socket.id).emit('gameState', safeGameState);
-    io.to(socket.id).emit('lobbyJoined', { lobbyName, gameState: safeGameState });
-  
-    if (lobby.players.length === 2) {
-      gameState.currentTurn = lobby.players[0].id;
-      io.to(lobbyName).emit('turnUpdate', gameState.currentTurn, gameState.players[gameState.currentTurn].name);
-      startQuestionRound(lobbyName);
-    }
+
+ // Example socket event for creating a lobby
+socket.on('createLobby', ({ lobbyName, password, playerName, isPublic }) => {
+  console.log('✅ Received createLobby:', { lobbyName, password, playerName, isPublic });
+
+  // 🛑 Check if the lobby name is already taken
+  if (lobbies[lobbyName]) {
+    return socket.emit('error', 'Lobby name already taken.');
   }
-  
-  
 
-  socket.on('submitQuestion', (question) => {
-    const lobby = lobbies[socket.data.lobby];
-    if (!lobby) return;
-    lobby.gameState.questions.push(question);
-    io.to(socket.data.lobby).emit('questionAdded', question);
-  });
+  // 🧠 Private lobbies must have a password
+  if (!isPublic && (!password || password.trim() === '')) {
+    return socket.emit('error', 'Password is required for private lobbies.');
+  }
 
-  socket.on('submitDare', (dare) => {
-    const lobby = lobbies[socket.data.lobby];
-    if (!lobby) return;
-    lobby.gameState.dares.push(dare);
-    io.to(socket.data.lobby).emit('dareAdded', dare);
-  });
+  // ✅ Create the lobby
+  lobbies[lobbyName] = {
+    name: lobbyName,
+    password,
+    isPublic,
+    players: [],
+    gameState: createNewGameState()
+  };
 
-  socket.on('submitAnswer', ({ answer, imageUrl }) => {
-    const lobby = lobbies[socket.data.lobby];
-    const gameState = lobby?.gameState;
-    if (!gameState || socket.id !== gameState.currentTurn || !imageUrl) return;
+  console.log('🏗️ Lobby created:', lobbies[lobbyName]);
 
-    const entry = {
-      player: socket.data.playerName,
-      question: gameState.currentQuestion,
-      answer,
-      imageUrl,
-      timestamp: new Date().toISOString()
-    };
-    gameState.history.questions.push(entry);
-    io.to(socket.data.lobby).emit('answerSubmitted', entry);
-    nextTurn(socket.data.lobby);
-  });
+  // 👤 Add the creator to the lobby
+  joinLobby(socket, lobbyName, isPublic ? '' : password, playerName);
 
-  socket.on('completeDare', ({ imageUrl }) => {
-    const lobby = lobbies[socket.data.lobby];
-    const gameState = lobby?.gameState;
-    if (!gameState || socket.id !== gameState.currentTurn || !imageUrl) return;
+  // 🔁 Update all clients with the new lobby list
+  updateLobbyList();
+});
 
-    const entry = {
-      player: socket.data.playerName,
-      dare: gameState.currentDare,
-      imageUrl,
-      timestamp: new Date().toISOString()
-    };
-    gameState.history.dares.push(entry);
-    io.to(socket.data.lobby).emit('dareSubmitted', entry);
-    nextTurn(socket.data.lobby);
-  });
+
 
   socket.on('disconnect', () => {
-    const lobbyName = socket.data.lobby;
-    const playerName = socket.data.playerName;
-    const lobby = lobbies[lobbyName];
-    if (!lobby) return;
+  const lobbyName = socket.data.lobby;
+  const playerName = socket.data.playerName;
 
-    lobby.players = lobby.players.filter(p => p.id !== socket.id);
-    delete lobby.gameState.players[socket.id];
+  if (!lobbyName || !lobbies[lobbyName]) return;
 
-    io.to(lobbyName).emit('updatePlayers', lobby.players);
-    if (socket.id === lobby.gameState.currentTurn) {
-      nextTurn(lobbyName);
-    }
+  const lobby = lobbies[lobbyName];
+  const player = lobby.players.find(p => p.id === socket.id);
+  if (!player) return;
 
-    updateLobbyList();
-    console.log(`${playerName} disconnected from ${lobbyName}`);
-  });
+  player.disconnected = true;
 
-  function updateLobbyList() {
-    const lobbyList = Object.entries(lobbies).map(([name, lobby]) => ({
-      name,
-      count: lobby.players.length
-    }));
-    io.emit('lobbyList', lobbyList);
+  if (socket.id === lobby.gameState.currentTurn) {
+    lobby.gameState.timerPaused = true;
+    io.to(lobbyName).emit('turnPaused', {
+      message: `${playerName} disconnected. Turn paused.`
+    });
   }
 
+  // 👥 Notify all
+  io.to(lobbyName).emit('updatePlayers', lobby.players);
+
+  // 🧼 If both disconnected, null out turn
+  const live = lobby.players.filter(p => !p.disconnected);
+  if (live.length === 0) {
+    lobby.gameState.currentTurn = null;
+    lobby.gameState.currentQuestion = null;
+    lobby.gameState.currentDare = null;
+    clearInterval(lobby.gameState.timerInterval);
+  }
+
+  console.log(`${playerName} disconnected from ${lobbyName}`);
+});
+
+
+
+
+socket.on('getLobbies', () => {
+  const lobbyList = Object.entries(lobbies).map(([name, lobby]) => ({
+    name,
+    count: lobby.players.length,
+    isPublic: lobby.isPublic // ✅ Make sure this is included
+  }));
+  socket.emit('lobbyList', lobbyList);
+});
+
+ 
+
+socket.on('joinLobby', ({ lobbyName, password, playerName }) => {
+  joinLobby(socket, lobbyName, password, playerName);
+});
+
+function joinLobby(socket, lobbyName, password, playerName) {
+  const lobby = lobbies[lobbyName];
+  if (!lobby) {
+    return socket.emit('error', 'Lobby not found.');
+  }
+
+  // ❗ Skip password check for public lobbies
+if (lobby.isPublic && password && password.trim() !== '') {
+  return socket.emit('error', 'Public lobbies do not require passwords.');
+}
+
+if (!lobby.isPublic && lobby.password !== password) {
+  return socket.emit('error', 'Incorrect password.');
+}
+
+
+  const gameState = lobby.gameState;
+
+  // 🧼 Clean players: remove stale ones without game state
+  lobby.players = lobby.players.filter(p => gameState.players[p.id]);
+
+  // ✅ Check if name already exists and is disconnected
+  let existing = lobby.players.find(p => p.name === playerName);
+
+  if (existing) {
+    const oldId = existing.id;
+
+    existing.id = socket.id;
+    existing.disconnected = false;
+
+    if (gameState.players[oldId]) {
+      gameState.players[socket.id] = {
+        ...gameState.players[oldId],
+        id: socket.id,
+        name: playerName
+      };
+      delete gameState.players[oldId];
+    }
+
+    if (gameState.currentTurn === oldId) {
+      gameState.currentTurn = socket.id;
+    }
+  } else {
+    // 🔁 If name is different but a player is disconnected, reassign that slot
+    const slotToReplace = lobby.players.find(p => p.disconnected);
+    if (slotToReplace) {
+      const oldId = slotToReplace.id;
+      slotToReplace.id = socket.id;
+      slotToReplace.name = playerName;
+      slotToReplace.disconnected = false;
+
+      if (gameState.players[oldId]) {
+        gameState.players[socket.id] = {
+          ...gameState.players[oldId],
+          id: socket.id,
+          name: playerName
+        };
+        delete gameState.players[oldId];
+      }
+
+      if (gameState.currentTurn === oldId) {
+        gameState.currentTurn = socket.id;
+      }
+    } else {
+      // 🚫 Fully new player and lobby is full
+      const connectedPlayers = lobby.players.filter(p => !p.disconnected);
+      if (connectedPlayers.length >= 2) {
+        return socket.emit('error', 'Lobby full.');
+      }
+
+      // ➕ Add new player
+      lobby.players.push({ id: socket.id, name: playerName, disconnected: false });
+      gameState.players[socket.id] = { id: socket.id, name: playerName };
+    }
+  }
+
+  // 📎 Attach session
+  socket.join(lobbyName);
+  socket.data.lobby = lobbyName;
+  socket.data.playerName = playerName;
+
+  io.to(lobbyName).emit('updatePlayers', lobby.players);
+
+  if (!gameState.history) {
+  gameState.history = {
+    questions: [],
+    dares: []
+  };
+}
+
+
+  const { timer, timerInterval, ...rest } = gameState;
+  const safeGameState = {
+    ...rest,
+    players: Object.fromEntries(
+      Object.entries(gameState.players).map(([id, p]) => [id, { id: p.id, name: p.name }])
+    )
+  };
+
+  io.to(socket.id).emit('lobbyJoined', { lobbyName, gameState: safeGameState });
+  io.to(socket.id).emit('gameState', safeGameState);
+
+  // ✅ Always update rejoining player with current turn and active prompt
+if (gameState.currentTurn && gameState.players[gameState.currentTurn]) {
+  io.to(socket.id).emit('turnUpdate', gameState.currentTurn, gameState.players[gameState.currentTurn].name);
+}
+
+if (gameState.currentQuestion) {
+  io.to(socket.id).emit('newQuestion', {
+    question: gameState.currentQuestion,
+    currentTurn: gameState.currentTurn
+  });
+} else if (gameState.currentDare) {
+  io.to(socket.id).emit('newDare', {
+    dare: gameState.currentDare,
+    currentTurn: gameState.currentTurn
+  });
+}
+
+
+  const livePlayers = lobby.players.filter(p => !p.disconnected);
+
+  if (livePlayers.length === 2 && (!gameState.currentTurn || !gameState.players[gameState.currentTurn])) {
+    gameState.currentTurn = livePlayers[0].id;
+    io.to(lobbyName).emit('turnUpdate', gameState.currentTurn, gameState.players[gameState.currentTurn].name);
+    startQuestionRound(lobbyName);
+  }
+
+  if (livePlayers.length === 2 && gameState.timerPaused) {
+    gameState.timerPaused = false;
+    io.to(lobbyName).emit('turnUpdate', gameState.currentTurn, gameState.players[gameState.currentTurn]?.name);
+
+    if (gameState.currentQuestion) {
+      io.to(lobbyName).emit('newQuestion', {
+        question: gameState.currentQuestion,
+        currentTurn: gameState.currentTurn
+      });
+    } else if (gameState.currentDare) {
+      io.to(lobbyName).emit('newDare', {
+        dare: gameState.currentDare,
+        currentTurn: gameState.currentTurn
+      });
+    }
+
+    startTimer(lobbyName, () => {
+      io.to(gameState.currentTurn).emit('timeout');
+      nextTurn(lobbyName);
+    });
+  }
+
+  // 👤 Ensure non-turn rejoining player still sees current turn + prompt
+if (
+  livePlayers.length === 2 &&
+  gameState.currentTurn &&
+  gameState.players[gameState.currentTurn]
+) {
+  // Send current turn to the newly joined socket
+  io.to(socket.id).emit(
+    'turnUpdate',
+    gameState.currentTurn,
+    gameState.players[gameState.currentTurn].name
+  );
+
+  // Re-send the current prompt
+  if (gameState.currentQuestion) {
+    io.to(socket.id).emit('newQuestion', {
+      question: gameState.currentQuestion,
+      currentTurn: gameState.currentTurn
+    });
+  } else if (gameState.currentDare) {
+    io.to(socket.id).emit('newDare', {
+      dare: gameState.currentDare,
+      currentTurn: gameState.currentTurn
+    });
+  }
+}
+
+  updateLobbyList();
+}
+
+
+
+
+function updateLobbyList() {
+  const list = Object.entries(lobbies).map(([name, lobby]) => ({
+    name,
+    count: Object.keys(lobby.gameState.players).length,
+    isPublic: lobby.isPublic || false // ✅ Send isPublic to frontend
+  }));
+  io.emit('lobbyList', list);
+}
+
+
+
+
   function createNewGameState() {
-    
-    
+  
+  
     return {
       players: {},
       currentTurn: null,
@@ -320,36 +501,101 @@ usedDares: {},     // playerID -> [dare strings]
     };
   }
 
+  console.log('New connection:', socket.id);
+
+  socket.on('submitAnswer', ({ answer, imageUrl, dareImageUrl }) => {
+  const lobbyName = socket.data.lobby;
+  const playerName = socket.data.playerName;
+
+  if (!lobbies[lobbyName]) return;
+
+  const gameState = lobbies[lobbyName].gameState;
+  const playerId = socket.id;
+
+    console.log('✅ submitAnswer received', answer);
+
+
+  // Save to history
+  const entry = {
+    question: gameState.currentQuestion,
+    answer,
+    imageUrl,
+    dareImageUrl,
+    player: playerName,
+    timestamp: Date.now()
+  };
+
+  gameState.history.questions.unshift(entry); // add to beginning
+  io.to(lobbyName).emit('answerSubmitted', entry);
+
+  // Clear current round
+  gameState.currentQuestion = null;
+  clearInterval(gameState.timerInterval);
+
+  // Let frontend reset
+  io.to(lobbyName).emit('roundCompleted');
+
+  // Move to next player
+  nextTurn(lobbyName);
+
+});
+
+  // ✅ Put this here
   socket.on('deleteLobby', ({ lobbyName, password }) => {
     const lobby = lobbies[lobbyName];
     if (!lobby) {
       socket.emit('deleteLobbyError', 'Lobby not found.');
       return;
     }
-  
+
     if (lobby.password !== password) {
       socket.emit('deleteLobbyError', 'Incorrect password.');
       return;
     }
-  
+
     // Notify players in the lobby (if any)
     io.to(lobbyName).emit('deleteLobbySuccess', { message: `${lobbyName} was deleted.` });
-  
+
     // Clean up
     delete lobbies[lobbyName];
     updateLobbyList();
+
+    
+socket.onAny((event, data) => {
+  console.log("📡 Received event:", event, data);
+});
+
   });
+
+});
+
+
+
+
   
 
+function startTimer(lobbyName, onTimeout) {
+  const gameState = lobbies[lobbyName]?.gameState;
+  if (!gameState) return;
+
+  // Start fresh
+  clearInterval(gameState.timerInterval);
+  gameState.timeLeft = 60 * 60; // 1 hour in seconds
+
+  gameState.timerInterval = setInterval(() => {
+    if (gameState.timerPaused) return; // Do nothing if paused
+
+    gameState.timeLeft--;
+    io.to(lobbyName).emit('updateTimer', gameState.timeLeft);
+
+    if (gameState.timeLeft <= 0) {
+      clearInterval(gameState.timerInterval);
+      onTimeout();
+    }
+  }, 1000);
+}
 
 
-  
-
-  function startTimer(lobbyName, callback) {
-    const gameState = lobbies[lobbyName]?.gameState;
-    clearTimeout(gameState?.timer);
-    gameState.timer = setTimeout(callback, 60 * 60 * 1000);
-  }
 
 function startQuestionRound(lobbyName) {
   const gameState = lobbies[lobbyName]?.gameState;
@@ -433,7 +679,8 @@ function startDareRound(lobbyName) {
     if (Math.random() > 0.5) startQuestionRound(lobbyName);
     else startDareRound(lobbyName);
   }
-});
+
+
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
