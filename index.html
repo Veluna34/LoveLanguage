@@ -68,10 +68,40 @@
     }
   </style>
 </head>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('status');
+  const messageDiv = document.getElementById('status-message');
+
+  if (status === 'created') {
+    messageDiv.textContent = "✅ Account created successfully!";
+    messageDiv.classList.remove('d-none');
+  } else if (status === 'loggedin') {
+    messageDiv.textContent = "✅ Signed in successfully!";
+    messageDiv.classList.remove('d-none');
+  }
+
+  if (status) {
+    setTimeout(() => {
+      messageDiv.classList.add('d-none');
+    }, 4000);
+  }
+</script>
+
+
 <body>
   <div class="container">
+    <div id="status-message" class="alert alert-success text-center d-none" role="alert"></div>
     <div class="title">💖 Welcome Too LoveLanguage</div>
-    <div class="subtitle">Pick a game to connect, play, and explore with other people in public or private lobbies <br> made for two. You can Chat and Talk Too Others</div>
+    <div class="subtitle">Pick a game to connect, play, and explore with other people in public or private lobbies <br> made for two. You can Chat and Talk Too Others<br><br>Before Joining Lobbies Click On Peoples Names To View There Profile</div>
+<div style="text-align: center; margin-bottom: 2.5rem;">
+  <a href="create-account.html" class="btn btn-danger btn-lg me-2">Create Account</a>
+  <a href="signin.html" class="btn btn-danger btn-lg me-2">Sign In</a>
+    <button id="profile-btn" class="btn btn-danger btn-lg me-2">View Profile</button>
+
+</div>
+
 
     <div class="game-list">
       <div class="game-card" onclick="window.location.href='truth_or_dare.html'">
@@ -79,16 +109,71 @@
         <p>Spicy and playful game to deepen your bond through fun dares and honest questions.</p>
       </div>
 
-      <div class="game-card" onclick="alert('Coming soon!')">
+<div class="game-card" onclick="window.location.href='would_you_rather.html?username=' + encodeURIComponent(localStorage.getItem('username'))">
         <h3>Would You Rather</h3>
         <p>Test each other’s limits with difficult decisions and personal preferences.</p>
       </div>
 
-      <div class="game-card" onclick="alert('Coming soon!')">
-        <h3>Guess the Memory</h3>
-        <p>Relive your favorite moments together through memory-based clues and photos.</p>
+<div class="game-card" onclick="window.location.href='two_truths_one_lie.html?username=' + encodeURIComponent(localStorage.getItem('username'))">
+        <h3>Two Truths One Lie</h3>
+        <p>Enter two truth and one lie, The other person must guess the lie, Have fun get crazy</p>
       </div>
     </div>
   </div>
+  <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const status = new URLSearchParams(window.location.search).get('status');
+    const messageDiv = document.getElementById('status-message');
+
+    if (messageDiv) {
+      if (status === 'created') {
+        messageDiv.textContent = "✅ Account created successfully!";
+        messageDiv.classList.remove('d-none');
+        localStorage.setItem('username', new URLSearchParams(window.location.search).get('user') || '');
+      } else if (status === 'loggedin') {
+        messageDiv.textContent = "✅ Signed in successfully!";
+        messageDiv.classList.remove('d-none');
+        localStorage.setItem('username', new URLSearchParams(window.location.search).get('user') || '');
+      }
+      setTimeout(() => messageDiv.classList.add('d-none'), 4000);
+    }
+
+    // Profile Button Logic
+    document.getElementById('profile-btn').addEventListener('click', () => {
+      const username = localStorage.getItem('username');
+      if (username) {
+        window.location.href = `profile.html?username=${encodeURIComponent(username)}`;
+      } else {
+        window.location.href = `signin.html?error=mustlogin`;
+      }
+    });
+  });
+</script>
+
 </body>
 </html>
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    const messageDiv = document.getElementById('status-message');
+
+    if (!messageDiv) return;
+
+    if (status === 'created') {
+      messageDiv.textContent = "✅ Account created successfully!";
+      messageDiv.classList.remove('d-none');
+    } else if (status === 'loggedin') {
+      messageDiv.textContent = "✅ Signed in successfully!";
+      messageDiv.classList.remove('d-none');
+    }
+
+    if (status) {
+      setTimeout(() => {
+        messageDiv.classList.add('d-none');
+      }, 4000);
+    }
+  });
+</script>
+

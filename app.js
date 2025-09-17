@@ -5,12 +5,28 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 
+
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
 // ✅ Serve all static files in the root folder (like index.html, style.css, etc.)
 app.use(express.static(__dirname));
+app.use(express.static('public'));
+app.use(express.json());                         // ✅ Handles JSON data (e.g. API)
+app.use(express.urlencoded({ extended: true })); 
+const usersPath = path.join(__dirname, 'users.json');
+
+const wouldYouRatherLobbies = {}; // { lobbyName: { ...lobbyData } }
+// --- Two Truths, One Lie (TTWL) ---
+const ttwlLobbies = {}; // { [lobbyName]: { name, isPublic, password, creator, players: [{id,name,disconnected}], gameState: {...} } }
+
+
+
+// Then push to the user's extraImages array:
+
+
 
 // ✅ Serve index.html at the root URL
 app.get('/', (req, res) => {
@@ -20,23 +36,122 @@ app.get('/', (req, res) => {
 
 
 
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = 'public/uploads';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
+    const dir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    cb(null, dir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    cb(null, uniqueSuffix + '-' + file.originalname);
   }
 });
+
 const upload = multer({ storage });
+
 
 app.use(express.static('public'));
 app.use(express.json());
+
+app.post('/update-profile', upload.fields([
+  { name: 'profilePic', maxCount: 1 },
+  { name: 'extraImages', maxCount: 10 }
+]), (req, res) => {
+  try {
+  const {
+  username,
+  oldUsername,
+  gender,
+  dob,
+  password,
+  town,
+  state,
+  bio, // ✅ Add this line
+  imagesToRemove
+} = req.body;
+
+
+    const newPic = req.files?.profilePic?.[0]?.filename;
+    const extraImages = req.files?.extraImages?.map(f => f.filename) || [];
+    const removedImages = imagesToRemove?.split(',').filter(Boolean) || [];
+
+    console.log("🔧 Received:", { username, oldUsername, gender, dob, town, state, password });
+    console.log("📷 Files:", req.files);
+    console.log("🗑️ To Remove:", removedImages);
+
+    if (!oldUsername || !username) return res.status(400).send('Missing username.');
+    if (!fs.existsSync(usersPath)) return res.status(500).send("User data file not found.");
+
+    let users = JSON.parse(fs.readFileSync(usersPath, 'utf-8') || '[]');
+    const user = users.find(u => u.username === oldUsername);
+    if (!user) return res.status(404).send("User not found.");
+
+    // ✅ Update all fields
+    user.username = username;
+    user.gender = gender;
+    user.dob = dob;
+    user.town = town;
+    user.state = state;
+    user.bio = bio || ''; // ✅ Save the bio (or set empty if none)
+
+    if (password?.trim()) user.password = password;
+    if (newPic) user.profilePic = newPic;
+
+    // 🧹 Remove deleted images
+    user.extraImages = (user.extraImages || []).filter(img => !removedImages.includes(img));
+
+    // ➕ Add new uploaded extra images
+    user.extraImages.push(...extraImages);
+
+    // 🔥 Delete removed image files from disk
+    for (const filename of removedImages) {
+      const fullPath = path.join(__dirname, 'uploads', filename);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    }
+
+    // Save updates
+    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+    res.status(200).send("Profile updated.");
+  } catch (err) {
+    console.error("❌ Update profile error:", err);
+    res.status(500).send("Internal server error.");
+  }
+});
+
+
+app.post('/delete-extra-image', (req, res) => {
+  const { username, filename } = req.body;
+
+  if (!username || !filename) {
+    return res.status(400).send('Missing required fields.');
+  }
+
+  if (!fs.existsSync(usersPath)) {
+    return res.status(500).send('User data file not found.');
+  }
+
+  let users = JSON.parse(fs.readFileSync(usersPath, 'utf-8') || '[]');
+  const user = users.find(u => u.username === username);
+  if (!user) return res.status(404).send('User not found.');
+
+  // Remove image from user's extraImages array
+  user.extraImages = (user.extraImages || []).filter(img => img !== filename);
+
+  // Delete image file
+  const imagePath = path.join(__dirname, 'uploads', filename);
+  if (fs.existsSync(imagePath)) {
+    fs.unlinkSync(imagePath);
+  }
+
+  fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+  res.status(200).send('Image deleted.');
+});
+
+
 
 app.post('/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).send('No file uploaded.');
@@ -52,6 +167,126 @@ io.on('connection', (socket) => {
   socket.emit('lobbyCreatedDebug', { success: true });
 
   console.log("📥 Chat handler registered for:", socket.id);
+
+  // 📢 Handle Would You Rather lobby creation
+
+  // ------- TTWL Chat (backend) -------
+socket.on('ttwlChatMessage', ({ lobbyName, playerName, message }) => {
+  const lobby = ttwlLobbies[lobbyName];
+  if (!lobby) return;
+
+  // Basic guard
+  const text = (message || '').toString().trim();
+  if (!text) return;
+
+  const entry = {
+    playerName: playerName || 'Player',
+    message: text,
+    timestamp: Date.now()
+  };
+
+  lobby.gameState.chat = lobby.gameState.chat || [];
+  lobby.gameState.chat.push(entry);
+
+  io.to(lobbyName).emit('ttwlChatMessage', entry);
+});
+
+socket.on('ttwlTyping', ({ lobbyName, isTyping }) => {
+  const pn = socket.data?.playerName || 'Player';
+  if (!lobbyName) return;
+  // notify everyone else in the room
+  socket.to(lobbyName).emit('ttwlTyping', { playerName: pn, isTyping: !!isTyping });
+});
+
+
+  // --- CHAT (shared for ToD + WYR) ---
+function ttwlSanitize(s) {
+  if (typeof s !== 'string') return '';
+  return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+
+socket.on('chat:send', ({ scope, lobbyName, text }) => {
+  const clean = sanitizeText(text || '').trim();
+  if (!clean) return;
+
+  const from = socket.data.playerName || 'Unknown';
+
+  if (scope === 'wyr') {
+    const lobby = wouldYouRatherLobbies[lobbyName];
+    if (!lobby) return;
+    // ensure sender is in this room
+    if (!lobby.players.some(p => p.id === socket.id)) return;
+
+    // store (optional)
+    const gs = lobby.gameState;
+    gs.chat = gs.chat || [];
+    gs.chat.push({ from, text: clean, ts: Date.now() });
+    if (gs.chat.length > 500) gs.chat.shift(); // cap history
+
+    io.to(lobbyName).emit('chat:msg', { from, text: clean, ts: Date.now(), scope: 'wyr' });
+  } else {
+    // default to ToD
+    const lobby = lobbies[lobbyName];
+    if (!lobby) return;
+    if (!lobby.players.some(p => p.id === socket.id)) return;
+
+    const gs = lobby.gameState;
+    gs.chat = gs.chat || [];
+    gs.chat.push({ from, text: clean, ts: Date.now() });
+    if (gs.chat.length > 500) gs.chat.shift();
+
+    io.to(lobbyName).emit('chat:msg', { from, text: clean, ts: Date.now(), scope: 'tod' });
+  }
+});
+
+// typing indicator (optional)
+socket.on('chat:typing', ({ scope, lobbyName, typing }) => {
+  const from = socket.data.playerName || 'Unknown';
+  // only to others in the same room
+  socket.to(lobbyName).emit('chat:typing', { from, typing: !!typing, scope });
+});
+
+
+socket.on('createWyrLobby', ({ name, password, isPublic, username }) => {
+  if (wouldYouRatherLobbies[name]) {
+    return socket.emit('error', 'Lobby name already exists.');
+  }
+
+wouldYouRatherLobbies[name] = {
+  name,
+  password,
+  isPublic,
+  creator: username,
+  players: [],
+  gameState: {
+    players: {},
+    currentTurn: null,
+    currentPrompt: null,
+    timerInterval: null,
+    timerPaused: false,
+    timeLeft: 0,
+    history: { wyr: [] },
+    chat: []                     // ✅ add this
+  }
+};
+
+
+  console.log("✅ Created WYR lobby:", name);
+  updateWyrLobbyList(); // 🔥 this is crucial
+});
+
+
+// 🧠 Join WYR lobby
+socket.on('joinWyrLobby', ({ lobbyName, password, playerName }) => {
+  joinWyrLobby(socket, lobbyName, password, playerName);
+});
+
+// 🔁 Get all WYR lobbies
+socket.on('getWyrLobbies', () => {
+  updateWyrLobbyList();
+});
+
+
 
 
   socket.on('chatMessage', ({ lobbyName, playerName, message }) => {
@@ -76,6 +311,40 @@ io.on('connection', (socket) => {
     io.to(lobbyName).emit('chatMessage', entry);
   });
 
+socket.on('deleteWyrLobby', ({ name, password }) => {
+  const lobby = wouldYouRatherLobbies[name];
+  if (!lobby) {
+    return socket.emit('deleteWyrLobbyError', 'Lobby not found.');
+  }
+
+  const requester = socket.data.playerName || 'Unknown';
+
+  // Auth rules:
+  // - Public: only the creator can delete
+  // - Private: must provide correct password (anyone with it can delete)
+  if (lobby.isPublic) {
+    if (lobby.creator !== requester) {
+      return socket.emit('deleteWyrLobbyError', 'Only the creator can delete this public lobby.');
+    }
+  } else {
+    if (!password || password !== lobby.password) {
+      return socket.emit('deleteWyrLobbyError', 'Incorrect password for this private lobby.');
+    }
+  }
+
+  // Notify all clients in the lobby and boot them from the room
+  io.to(name).emit('wyrLobbyDeleted', { name, by: requester });
+
+  // Make sockets leave the room (prevents lingering emits)
+  io.socketsLeave(name);
+
+  // Remove the lobby and refresh list
+  delete wouldYouRatherLobbies[name];
+  updateWyrLobbyList();
+
+  // Ack to the requester
+  socket.emit('deleteWyrLobbySuccess', { name });
+});
 
     
 
@@ -83,6 +352,8 @@ io.on('connection', (socket) => {
  // Example socket event for creating a lobby
 socket.on('createLobby', ({ lobbyName, password, playerName, isPublic }) => {
   console.log('✅ Received createLobby:', { lobbyName, password, playerName, isPublic });
+    console.log('👤 Creator Username (playerName):', playerName);
+
 
   // 🛑 Check if the lobby name is already taken
   if (lobbies[lobbyName]) {
@@ -94,14 +365,24 @@ socket.on('createLobby', ({ lobbyName, password, playerName, isPublic }) => {
     return socket.emit('error', 'Password is required for private lobbies.');
   }
 
-  // ✅ Create the lobby
+if (!lobbies[lobbyName]) {
   lobbies[lobbyName] = {
     name: lobbyName,
     password,
     isPublic,
-    players: [],
+    creator: playerName,
+    players: [socket.id],
     gameState: createNewGameState()
   };
+} else {
+  // ✅ Only push the new player if lobby exists
+  lobbies[lobbyName].players.push(socket.id);
+}
+
+
+console.log("🧨 After assigning gameState:", JSON.stringify(lobbies[lobbyName], null, 2));
+
+
 
   console.log('🏗️ Lobby created:', lobbies[lobbyName]);
 
@@ -112,6 +393,37 @@ socket.on('createLobby', ({ lobbyName, password, playerName, isPublic }) => {
   updateLobbyList();
 });
 
+socket.on('disconnect', () => {
+  // ... your existing truth-or-dare cleanup
+
+  const wyrLobbyName = socket.data?.wyrLobby;
+  const playerName = socket.data?.playerName;
+
+  if (wyrLobbyName) {
+    const lobby = wouldYouRatherLobbies[wyrLobbyName];
+    if (!lobby) return;
+
+    const gameState = lobby.gameState;
+    const player = lobby.players.find(p => p.id === socket.id);
+    if (!player) return;
+
+    player.disconnected = true;
+
+    if (socket.id === gameState.currentTurn) {
+      gameState.timerPaused = true;
+      io.to(wyrLobbyName).emit('turnPausedWyr', { message: `${playerName} disconnected. Turn paused.` });
+    }
+
+    io.to(wyrLobbyName).emit('updatePlayers', lobby.players);
+
+    const live = lobby.players.filter(p => !p.disconnected);
+    if (live.length === 0) {
+      gameState.currentTurn = null;
+      gameState.currentPrompt = null;
+      clearInterval(gameState.timerInterval);
+    }
+  }
+});
 
 
   socket.on('disconnect', () => {
@@ -155,7 +467,8 @@ socket.on('getLobbies', () => {
   const lobbyList = Object.entries(lobbies).map(([name, lobby]) => ({
     name,
     count: lobby.players.length,
-    isPublic: lobby.isPublic // ✅ Make sure this is included
+    isPublic: lobby.isPublic,
+    creator: lobby.creator || "Unknown" // ✅ Include creator!
   }));
   socket.emit('lobbyList', lobbyList);
 });
@@ -166,8 +479,212 @@ socket.on('joinLobby', ({ lobbyName, password, playerName }) => {
   joinLobby(socket, lobbyName, password, playerName);
 });
 
+// Emits the list to everyone
+function updateWyrLobbyList() {
+  const list = Object.values(wouldYouRatherLobbies).map(lobby => ({
+    name: lobby.name,
+    isPublic: lobby.isPublic,
+    count: lobby.players.length,
+    creator: lobby.creator || 'Unknown'
+  }));
+  io.emit('wyrLobbyList', list); // <-- must match the frontend listener
+}
+
+// When a lobby is created, call the updater
+socket.on('createWyrLobby', ({ name, password, isPublic, username }) => {
+  if (wouldYouRatherLobbies[name]) {
+    return socket.emit('error', 'Lobby name already exists.');
+  }
+
+  wouldYouRatherLobbies[name] = {
+    name,
+    password,
+    isPublic,
+    creator: username,
+    players: [],
+    gameState: { players: {}, currentTurn: null }
+  };
+
+  console.log('✅ Created WYR lobby:', name);
+  updateWyrLobbyList(); // broadcast updated list
+});
+
+// Reply to the initial request on page load
+socket.on('requestWyrLobbies', () => {
+  updateWyrLobbyList();
+});
+
+
+
+function joinWyrLobby(socket, lobbyName, password, playerName) {
+  const lobby = wouldYouRatherLobbies[lobbyName];
+  console.log("📥 Received joinWyrLobby:", lobbyName, playerName);
+
+  if (!lobby) return socket.emit('error', 'Lobby not found.');
+
+  // Password rules
+  if (lobby.isPublic && password && password.trim() !== '') {
+    return socket.emit('error', 'Public lobbies do not require passwords.');
+  }
+  if (!lobby.isPublic && lobby.password !== password) {
+    return socket.emit('error', 'Incorrect password.');
+  }
+
+  const gameState = lobby.gameState;
+
+  // Clean out stale players not present in gameState
+  lobby.players = lobby.players.filter(p => gameState.players[p.id]);
+
+  // 1) If same player name exists (rejoin), swap socket id and keep their slot/state
+  let existing = lobby.players.find(p => p.name === playerName);
+  if (existing) {
+    const oldId = existing.id;
+
+    existing.id = socket.id;
+    existing.disconnected = false;
+
+    if (gameState.players[oldId]) {
+      gameState.players[socket.id] = { ...gameState.players[oldId], id: socket.id, name: playerName };
+      delete gameState.players[oldId];
+    } else {
+      gameState.players[socket.id] = { id: socket.id, name: playerName };
+    }
+
+    if (gameState.currentTurn === oldId) {
+      gameState.currentTurn = socket.id;
+    }
+  } else {
+    // 2) If a disconnected slot exists, reuse it
+    const slotToReplace = lobby.players.find(p => p.disconnected);
+    if (slotToReplace) {
+      const oldId = slotToReplace.id;
+      slotToReplace.id = socket.id;
+      slotToReplace.name = playerName;
+      slotToReplace.disconnected = false;
+
+      if (gameState.players[oldId]) {
+        gameState.players[socket.id] = { ...gameState.players[oldId], id: socket.id, name: playerName };
+        delete gameState.players[oldId];
+      } else {
+        gameState.players[socket.id] = { id: socket.id, name: playerName };
+      }
+
+      if (gameState.currentTurn === oldId) {
+        gameState.currentTurn = socket.id;
+      }
+    } else {
+      // 3) Brand new player — check capacity (2 max live players)
+      const connectedPlayers = lobby.players.filter(p => !p.disconnected);
+      if (connectedPlayers.length >= 2) {
+        return socket.emit('error', 'Lobby full.');
+      }
+
+      lobby.players.push({ id: socket.id, name: playerName, disconnected: false });
+      gameState.players[socket.id] = { id: socket.id, name: playerName };
+    }
+  }
+
+
+
+  // Attach session and join room
+  socket.join(lobbyName);
+  socket.data.wyrLobby = lobbyName;
+  socket.data.playerName = playerName;
+
+  io.to(lobbyName).emit('updatePlayers', lobby.players);
+
+  // Send safe game state to just-joined client
+  const { timerInterval, ...rest } = gameState;
+  const safeGameState = {
+    ...rest,
+    players: Object.fromEntries(
+      Object.entries(gameState.players).map(([id, p]) => [id, { id: p.id, name: p.name }])
+    )
+  };
+socket.emit('wyrLobbyJoined', {
+  lobbyName,
+  gameState: safeGameState,
+  players: lobby.players,
+  chat: (gameState.chat || []).slice(-100)   // ✅ send recent chat
+});
+
+  // If 2 live players and no current turn, start
+  const livePlayers = lobby.players.filter(p => !p.disconnected);
+  if (livePlayers.length === 2 && (!gameState.currentTurn || !gameState.players[gameState.currentTurn])) {
+    gameState.currentTurn = livePlayers[0].id;
+    io.to(lobbyName).emit('turnUpdateWyr', gameState.currentTurn, gameState.players[gameState.currentTurn].name);
+    sendWyrPrompt(lobbyName); // <-- your function that sets gameState.currentPrompt and emits it
+  }
+
+  // If we were paused and now two players are live again, resume
+  if (livePlayers.length === 2 && gameState.timerPaused) {
+    gameState.timerPaused = false;
+    io.to(lobbyName).emit('turnUpdateWyr', gameState.currentTurn, gameState.players[gameState.currentTurn]?.name);
+
+    // Re-send the prompt to the rejoining player
+    if (gameState.currentPrompt) {
+      socket.emit('newWyrPrompt', {
+        prompt: gameState.currentPrompt,
+        currentTurn: gameState.currentTurn
+      });
+    }
+
+  }}
+
+  
+
+
+function sendWyrPrompt(lobbyName) {
+  const lobby = wouldYouRatherLobbies[lobbyName];
+  if (!lobby) return;
+  const gameState = lobby.gameState;
+
+  const prompts = [
+    "Would you rather be able to fly or be invisible?",
+    "Would you rather have unlimited money or unlimited love?",
+    "Would you rather fight 1 horse-sized duck or 100 duck-sized horses?",
+    "Would you rather travel to the past or the future?",
+    "Would you rather always know when someone is lying or always get away with lying?"
+  ];
+
+  const prompt = prompts[Math.floor(Math.random() * prompts.length)];
+  gameState.currentPrompt = prompt; // ✅ consistent key
+
+  io.to(lobbyName).emit('newWyrPrompt', {
+    prompt,
+    currentTurn: gameState.currentTurn
+  });
+
+  // If you have a WYR timer, start it here
+  if (typeof startWyrTimer === 'function') {
+    startWyrTimer(lobbyName, () => {
+      io.to(gameState.currentTurn).emit('timeout');
+      // your turn-advance function:
+      // wyrNextTurn(lobbyName);
+      // or:
+      const ids = lobby.players.filter(p => !p.disconnected).map(p => p.id);
+      if (ids.length >= 2) {
+        const i = ids.indexOf(gameState.currentTurn);
+        gameState.currentTurn = ids[(i + 1) % ids.length];
+        io.to(lobbyName).emit('turnUpdateWyr', gameState.currentTurn, gameState.players[gameState.currentTurn]?.name);
+        sendWyrPrompt(lobbyName);
+      }
+    });
+  }
+}
+
+
+
+
+
 function joinLobby(socket, lobbyName, password, playerName) {
   const lobby = lobbies[lobbyName];
+if (typeof lobby.creator === 'undefined') {
+  console.warn(`🛑 Lobby "${lobbyName}" is missing creator during join. Restoring it from socket data.`);
+  lobby.creator = socket.data?.playerName || playerName || 'Unknown';
+}
+
+
   if (!lobby) {
     return socket.emit('error', 'Lobby not found.');
   }
@@ -347,16 +864,27 @@ if (
 }
 
 
-
-
 function updateLobbyList() {
-  const list = Object.entries(lobbies).map(([name, lobby]) => ({
-    name,
-    count: Object.keys(lobby.gameState.players).length,
-    isPublic: lobby.isPublic || false // ✅ Send isPublic to frontend
+  const list = Object.values(lobbies).map(lobby => ({
+    name: lobby.name,
+    count: lobby.players.length,
+    isPublic: lobby.isPublic,
+    creator: lobby.creator || "Unknown" // 👈 make sure this is passed
   }));
+
+    console.log("📤 Broadcasting lobby list:", list); // ✅ shows creators too
+      console.log("📤 Sending lobby list to all clients:", list); // ✅ Confirm creator exists
+
+Object.entries(lobbies).forEach(([name, lobby]) => {
+  if (!lobby.creator) {
+    console.warn(`⚠️ Lobby "${name}" is missing creator`);
+  }
+});
+
+
   io.emit('lobbyList', list);
 }
+
 
 
 
@@ -511,6 +1039,46 @@ usedDares: {},     // playerID -> [dare strings]
 
   console.log('New connection:', socket.id);
 
+  function sanitizeText(s) {
+  if (typeof s !== 'string') return '';
+  return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+
+// Send message to the current WYR lobby
+socket.on('wyrChat:send', ({ text }) => {
+  const lobbyName = socket.data.wyrLobby;
+  if (!lobbyName) return;
+
+  const lobby = wouldYouRatherLobbies[lobbyName];
+  if (!lobby) return;
+
+  const gs = lobby.gameState;
+  gs.chat = gs.chat || [];
+
+  const msg = {
+    from: socket.data.playerName || 'Unknown',
+    text: sanitizeText(text || '').trim(),
+    ts: Date.now()
+  };
+  if (!msg.text) return;
+
+  gs.chat.push(msg);
+  if (gs.chat.length > 500) gs.chat.shift(); // cap history
+
+  io.to(lobbyName).emit('wyrChat:msg', msg);
+});
+
+// Typing indicator (optional)
+socket.on('wyrChat:typing', ({ typing }) => {
+  const lobbyName = socket.data.wyrLobby;
+  if (!lobbyName) return;
+  socket.to(lobbyName).emit('wyrChat:typing', {
+    from: socket.data.playerName || 'Unknown',
+    typing: !!typing
+  });
+});
+
+
   socket.on('submitAnswer', ({ answer, imageUrl, dareImageUrl }) => {
   const lobbyName = socket.data.lobby;
   const playerName = socket.data.playerName;
@@ -520,33 +1088,48 @@ usedDares: {},     // playerID -> [dare strings]
   const gameState = lobbies[lobbyName].gameState;
   const playerId = socket.id;
 
-    console.log('✅ submitAnswer received', answer);
+  const isDare = !answer || answer.trim() === '';
 
+  if (!imageUrl) {
+    socket.emit('error', 'Image is required.');
+    return;
+  }
 
-  // Save to history
-  const entry = {
-    question: gameState.currentQuestion,
+  console.log(`✅ submitAnswer received (${isDare ? 'DARE' : 'QUESTION'}):`, {
     answer,
-    imageUrl,
-    dareImageUrl,
-    player: playerName,
-    timestamp: Date.now()
-  };
+    imageUrl
+  });
 
-  gameState.history.questions.unshift(entry); // add to beginning
-  io.to(lobbyName).emit('answerSubmitted', entry);
+const entry = {
+  type: isDare ? 'dare' : 'question',
+  question: isDare ? null : gameState.currentQuestion,
+  dare: isDare ? gameState.currentDare : null, // ✅ Set the dare field
+  answer: isDare ? null : answer.trim(),
+  imageUrl,
+  dareImageUrl,
+  player: playerName,
+  timestamp: Date.now()
+};
 
-  // Clear current round
+
+  // ✅ Store in correct section
+  if (isDare) {
+    gameState.history.dares.unshift(entry);
+  } else {
+    gameState.history.questions.unshift(entry);
+  }
+
   gameState.currentQuestion = null;
+  gameState.currentDare = null;
   clearInterval(gameState.timerInterval);
 
-  // Let frontend reset
+  io.to(lobbyName).emit('answerSubmitted', entry);
   io.to(lobbyName).emit('roundCompleted');
 
-  // Move to next player
   nextTurn(lobbyName);
-
 });
+
+
 
   // ✅ Put this here
   socket.on('deleteLobby', ({ lobbyName, password }) => {
@@ -575,8 +1158,491 @@ socket.onAny((event, data) => {
 
   });
 
+
+  socket.on('submitWyrChoice', ({ choice }) => {
+  const lobbyName  = socket.data.wyrLobby;
+  const playerName = socket.data.playerName;
+  const lobby = wouldYouRatherLobbies[lobbyName];
+  if (!lobby || !playerName) return;
+
+  const gameState = lobby.gameState;
+
+  // ✅ Make sure history bucket exists
+  gameState.history = gameState.history || {};
+  gameState.history.wyr = gameState.history.wyr || [];
+
+  // ✅ Use a consistent prompt key
+  const prompt = gameState.currentPrompt || null;
+
+  const entry = {
+    prompt,
+    player: playerName,
+    choice,                // "A" or "B"
+    timestamp: Date.now()
+  };
+
+  gameState.history.wyr.unshift(entry);
+
+  // Notify clients this round is done
+  io.to(lobbyName).emit('wyrRoundCompleted', entry);
+
+  // ✅ Clear prompt and timer for this round
+  gameState.currentPrompt = null;
+  if (gameState.timerInterval) {
+    clearInterval(gameState.timerInterval);
+    gameState.timerInterval = null;
+  }
+
+  // ✅ Advance to the next connected player (not just % 2 on raw ids)
+  const live = lobby.players.filter(p => !p.disconnected).map(p => p.id);
+  if (live.length < 2) {
+    // Not enough players to continue
+    gameState.currentTurn = live[0] || null;
+    return;
+  }
+
+  const idx = live.indexOf(gameState.currentTurn);
+  const nextId = live[(idx + 1) % live.length];
+  gameState.currentTurn = nextId;
+
+  const nextName =
+    gameState.players[nextId]?.name ||
+    lobby.players.find(p => p.id === nextId)?.name ||
+    'Player';
+
+  io.to(lobbyName).emit('turnUpdateWyr', nextId, nextName);
+
+  // ✅ Kick off the next prompt + timer
+  sendWyrPrompt(lobbyName);
 });
 
+// ====== TTWL: LOBBY LIST ======
+socket.on('requestTtwlLobbies', () => {
+  updateTtwlLobbyList();
+});
+
+// ====== TTWL: CREATE LOBBY ======
+socket.on('createTtwlLobby', ({ name, password, isPublic, username }) => {
+  if (ttwlLobbies[name]) {
+    return socket.emit('error', 'Lobby name already exists.');
+  }
+  if (!isPublic && (!password || !password.trim())) {
+    return socket.emit('error', 'Password required for private lobby.');
+  }
+// When creating a TTWL lobby (example)
+ttwlLobbies[name] = {
+  name,
+  password,
+  isPublic,
+  creator: username,
+  players: [],
+  gameState: {
+    players: {},
+    currentTurn: null,
+    // …
+    chat: [] // 👈 add this
+  }
+};
+
+  updateTtwlLobbyList();
+});
+
+// ====== TTWL: JOIN LOBBY ======
+socket.on('joinTtwlLobby', ({ lobbyName, password, playerName }) => {
+  const lobby = ttwlLobbies[lobbyName];
+  if (!lobby) return socket.emit('error', 'Lobby not found.');
+
+  if (lobby.isPublic && password && password.trim() !== '') {
+    return socket.emit('error', 'Public lobbies do not require passwords.');
+  }
+  if (!lobby.isPublic && lobby.password !== password) {
+    return socket.emit('error', 'Incorrect password.');
+  }
+
+  const gs = lobby.gameState;
+  gs.history ||= [];
+  gs.chat    ||= [];
+  lobby.players ||= [];
+
+  // Rejoin or occupy slot
+  let existing = lobby.players.find(p => p.name === playerName);
+  if (existing) {
+    const oldId = existing.id;
+    existing.id = socket.id;
+    existing.disconnected = false;
+
+    if (gs.players[oldId]) {
+      gs.players[socket.id] = { ...gs.players[oldId], id: socket.id, name: playerName };
+      delete gs.players[oldId];
+    } else {
+      gs.players[socket.id] = { id: socket.id, name: playerName };
+    }
+    if (gs.currentTurn === oldId) gs.currentTurn = socket.id;
+  } else {
+    const slot = lobby.players.find(p => p.disconnected);
+    if (slot) {
+      const oldId = slot.id;
+      slot.id = socket.id;
+      slot.name = playerName;
+      slot.disconnected = false;
+
+      if (gs.players[oldId]) {
+        gs.players[socket.id] = { ...gs.players[oldId], id: socket.id, name: playerName };
+        delete gs.players[oldId];
+      } else {
+        gs.players[socket.id] = { id: socket.id, name: playerName };
+      }
+      if (gs.currentTurn === oldId) gs.currentTurn = socket.id;
+    } else {
+      const live = lobby.players.filter(p => !p.disconnected);
+      if (live.length >= 2) return socket.emit('error', 'Lobby full.');
+      lobby.players.push({ id: socket.id, name: playerName, disconnected: false });
+      gs.players[socket.id] = { id: socket.id, name: playerName };
+    }
+  }
+
+  socket.join(lobbyName);
+  socket.data.ttwlLobby = lobbyName;
+  socket.data.ttwlPlayerName = playerName;
+
+  io.to(lobbyName).emit('updatePlayers', lobby.players);
+
+  // Safe state
+  const { timerInterval, ...rest } = gs;
+  const safeGS = {
+    ...rest,
+    players: Object.fromEntries(
+      Object.entries(gs.players).map(([id, p]) => [id, { id: p.id, name: p.name }])
+    )
+  };
+
+  // Send to **joining client** only
+  
+  socket.emit('ttwlLobbyJoined', {
+    lobbyName,
+    gameState: safeGS,
+    players: lobby.players,
+    history: gs.history,
+    chat: gs.chat.slice(-100)
+  });
+
+  // Start game if 2 live players and no turn yet
+  const liveIds = lobby.players.filter(p => !p.disconnected).map(p => p.id);
+  if (liveIds.length === 2 && (!gs.currentTurn || !gs.players[gs.currentTurn])) {
+    gs.currentTurn = liveIds[0];
+    const curName = gs.players[gs.currentTurn]?.name || 'Player';
+    io.to(lobbyName).emit('ttwlTurnUpdate', gs.currentTurn, curName);
+    gs.currentPhase = 'awaitingSet';
+    io.to(lobbyName).emit('ttwlAwaitingSet', { currentTurn: gs.currentTurn, playerName: curName });
+    // make sure this exists:
+    startTtwlTimer(lobbyName, () => nextTtwlTurn(lobbyName));
+  }
+
+  // If a round was mid-flow, re-send context to the joining socket
+  if (gs.currentPhase === 'awaitingSet') {
+    const curName = gs.players[gs.currentTurn]?.name || 'Player';
+    socket.emit('ttwlAwaitingSet', { currentTurn: gs.currentTurn, playerName: curName });
+  } else if (gs.currentPhase === 'awaitingGuess' && gs.currentSet?.shuffled) {
+    const guesserId = liveIds.find(id => id !== gs.currentSet.ownerId) || null;
+    socket.emit('ttwlShowSet', {
+      ownerName: gs.currentSet.ownerName,
+      statements: gs.currentSet.shuffled,
+      currentTurn: gs.currentTurn,
+      guesserId
+    });
+  }
+});
+
+// ====== TTWL: SUBMIT SET (Two truths, one lie) ======
+socket.on('ttwlSubmitSet', ({ statements, lieIndex }) => {
+  const lobbyName = socket.data.ttwlLobby;
+  const lobby = ttwlLobbies[lobbyName];
+  if (!lobby) return;
+  const gs = lobby.gameState;
+
+  // basic validation
+  if (!Array.isArray(statements) || statements.length !== 3) return;
+  if (![0,1,2].includes(lieIndex)) return;
+  if (gs.currentTurn !== socket.id) return; // not your turn
+
+  // store set
+  gs.currentSet = {
+    ownerId: socket.id,
+    ownerName: gs.players[socket.id]?.name || 'Player',
+    statements: statements.map(s => String(s || '').trim()),
+    lieIndex
+  };
+
+  // send to guesser
+  const live = lobby.players.filter(p => !p.disconnected).map(p => p.id);
+  const guesserId = live.find(id => id !== socket.id) || null;
+
+  const order = [0,1,2].sort(() => Math.random() - 0.5);
+  const shuffled = order.map(i => gs.currentSet.statements[i]);
+  gs.currentSet.shuffled = shuffled;
+  gs.currentSet.map = order; // map[shuffledIndex] = originalIndex
+  gs.currentPhase = 'awaitingGuess';
+
+  io.to(lobbyName).emit('ttwlShowSet', {
+    ownerName: gs.currentSet.ownerName,
+    statements: shuffled,
+    currentTurn: gs.currentTurn,
+    guesserId
+  });
+});
+
+
+// ====== TTWL: GUESS LIE ======
+socket.on('ttwlGuess', ({ guessIndex }) => {
+  const lobbyName = socket.data.ttwlLobby;
+  const lobby = ttwlLobbies[lobbyName];
+  if (!lobby) return;
+  const gs = lobby.gameState;
+  const set = gs.currentSet;
+  if (!set || gs.currentPhase !== 'awaitingGuess') return;
+
+  const live = lobby.players.filter(p => !p.disconnected).map(p => p.id);
+  const guesserId = live.find(id => id !== set.ownerId);
+  if (socket.id !== guesserId) return;
+
+  const originalIndex = set.map?.[guessIndex];
+  const correct = originalIndex === set.lieIndex;
+
+  const entry = {
+    owner: set.ownerName,
+    statements: set.statements,
+    lieIndex: set.lieIndex,
+    guesser: lobby.players.find(p => p.id === guesserId)?.name || 'Player',
+    guessIndex: originalIndex,
+    correct,
+    ts: Date.now()
+  };
+
+  gs.history = gs.history || [];
+  gs.history.unshift(entry);
+
+  io.to(lobbyName).emit('ttwlRoundCompleted', entry);
+
+  // advance turn (your function)
+  nextTtwlTurn(lobbyName);
+});
+
+// --- TTWL Chat ---
+function ttwlSanitize(s) {
+  if (typeof s !== 'string') return '';
+  return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+
+socket.on('ttwlChat:send', ({ text, playerName }) => {
+  const lobbyName = socket.data?.ttwlLobby;
+  if (!lobbyName) return;
+
+  const lobby = ttwlLobbies[lobbyName];
+  if (!lobby) return;
+
+  const gs = lobby.gameState;
+  gs.chat = gs.chat || [];
+
+  const clean = ttwlSanitize(text || '').trim();
+  if (!clean) return;
+
+  const from = playerName || socket.data?.ttwlPlayerName || 'Player';
+  const msg = { from, text: clean, ts: Date.now() };
+
+  gs.chat.push(msg);
+  if (gs.chat.length > 500) gs.chat.shift(); // cap history
+
+  io.to(lobbyName).emit('ttwlChat:msg', msg);
+});
+
+socket.on('ttwlChat:typing', ({ typing }) => {
+  const lobbyName = socket.data?.ttwlLobby;
+  if (!lobbyName) return;
+  const from = socket.data?.ttwlPlayerName || 'Player';
+  socket.to(lobbyName).emit('ttwlChat:typing', { from, typing: !!typing });
+});
+
+
+
+// ====== TTWL: CHAT (optional; re-use channel name if you want a separate feed) ======
+socket.on('ttwlChat', ({ lobbyName, playerName, message }) => {
+  const lobby = ttwlLobbies[lobbyName];
+  if (!lobby) return;
+  // You can also store lobby.gameState.chat if you want history
+  io.to(lobbyName).emit('ttwlChat', {
+    playerName,
+    message: String(message || '').slice(0, 500),
+    timestamp: Date.now()
+  });
+});
+
+// ====== TTWL: DELETE LOBBY ======
+socket.on('deleteTtwlLobby', ({ lobbyName, password }) => {
+  const lobby = ttwlLobbies[lobbyName];
+  if (!lobby) return socket.emit('deleteLobbyError', 'Lobby not found.');
+  if (!lobby.isPublic && lobby.password !== password) {
+    return socket.emit('deleteLobbyError', 'Incorrect password.');
+  }
+  io.to(lobbyName).emit('deleteLobbySuccess', { message: `${lobbyName} was deleted.` });
+  delete ttwlLobbies[lobbyName];
+  updateTtwlLobbyList();
+});
+
+// ====== TTWL: DISCONNECT HANDLING ======
+socket.on('disconnect', () => {
+  const lobbyName = socket.data?.ttwlLobby;
+  const playerName = socket.data?.ttwlPlayerName;
+  if (!lobbyName) return;
+
+  const lobby = ttwlLobbies[lobbyName];
+  if (!lobby) return;
+
+  const gs = lobby.gameState;
+  const p = lobby.players.find(pl => pl.id === socket.id);
+  if (!p) return;
+
+  p.disconnected = true;
+
+  if (socket.id === gs.currentTurn) {
+    gs.timerPaused = true;
+    io.to(lobbyName).emit('ttwlTurnPaused', { message: `${playerName} disconnected. Turn paused.` });
+  }
+
+  io.to(lobbyName).emit('updatePlayers', lobby.players);
+
+  const live = lobby.players.filter(pl => !pl.disconnected);
+  if (live.length === 0) {
+    gs.currentTurn = null;
+    gs.currentPhase = 'idle';
+    gs.currentSet = null;
+    clearInterval(gs.timerInterval);
+    gs.timerInterval = null;
+  }
+});
+
+
+});
+
+
+  
+
+
+function createTTWLGameState() {
+  return {
+    players: {},                 // socketId -> { id, name }
+    currentTurn: null,           // socketId
+    currentPhase: 'idle',        // 'awaitingSet' | 'awaitingGuess' | 'idle'
+    currentSet: null,            // { ownerId, ownerName, statements:[s1,s2,s3], lieIndex, shuffled:[...], map:[origIndexAtShuffledPos] }
+    timerInterval: null,
+    timerPaused: false,
+    timeLeft: 3600,              // seconds
+    history: []                  // { owner, statements:[...], lieIndex, guesser, guessIndex, correct, ts }
+  };
+}
+
+function updateTtwlLobbyList() {
+  const list = Object.values(ttwlLobbies).map(lobby => ({
+    name: lobby.name,
+    isPublic: lobby.isPublic,
+    count: lobby.players.filter(p => !p.disconnected).length,
+    creator: lobby.creator || 'Unknown'
+  }));
+  io.emit('ttwlLobbyList', list);
+}
+
+function startTtwlTimer(lobbyName, onTimeout) {
+  const gs = ttwlLobbies[lobbyName]?.gameState;
+  if (!gs) return;
+  clearInterval(gs.timerInterval);
+  gs.timeLeft = 3600;
+  gs.timerPaused = false;
+  gs.timerInterval = setInterval(() => {
+    if (gs.timerPaused) return;
+    gs.timeLeft--;
+    io.to(lobbyName).emit('ttwlUpdateTimer', gs.timeLeft);
+    if (gs.timeLeft <= 0) {
+      clearInterval(gs.timerInterval);
+      gs.timerInterval = null;
+      onTimeout?.();
+    }
+  }, 1000);
+}
+
+function nextTtwlTurn(lobbyName) {
+  const lobby = ttwlLobbies[lobbyName];
+  if (!lobby) return;
+  const gs = lobby.gameState;
+
+  const live = lobby.players.filter(p => !p.disconnected).map(p => p.id);
+  if (live.length < 2) {
+    gs.currentPhase = 'idle';
+    return;
+  }
+
+  const idx = Math.max(0, live.indexOf(gs.currentTurn));
+  const nextId = live[(idx + 1) % live.length];
+  gs.currentTurn = nextId;
+  gs.currentPhase = 'awaitingSet';
+  gs.currentSet = null;
+
+  const curName =
+    gs.players[nextId]?.name ||
+    lobby.players.find(p => p.id === nextId)?.name ||
+    'Player';
+
+  io.to(lobbyName).emit('ttwlTurnUpdate', nextId, curName);
+  io.to(lobbyName).emit('ttwlAwaitingSet', { currentTurn: nextId, playerName: curName });
+  startTtwlTimer(lobbyName, () => {
+    // If the setter times out, just pass the turn
+    nextTtwlTurn(lobbyName);
+  });
+}
+
+function sendTtwlSetToGuesser(lobbyName) {
+  const lobby = ttwlLobbies[lobbyName];
+  if (!lobby) return;
+  const gs = lobby.gameState;
+  const set = gs.currentSet;
+  if (!set) return;
+
+  // Build shuffled view for the guesser
+  const order = [0,1,2].sort(() => Math.random() - 0.5);
+  const shuffled = order.map(i => set.statements[i]);
+  const map = order; // map[shuffledIndex] = originalIndex
+
+  gs.currentSet.shuffled = shuffled;
+  gs.currentSet.map = map;
+
+  gs.currentPhase = 'awaitingGuess';
+
+  // Identify guesser: the other live player
+  const live = lobby.players.filter(p => !p.disconnected).map(p => p.id);
+  const guesserId = live.find(id => id !== set.ownerId);
+  const turnName = gs.players[gs.currentTurn]?.name || 'Player';
+
+  io.to(lobbyName).emit('ttwlShowSet', {
+    ownerName: set.ownerName,
+    statements: shuffled,
+    currentTurn: gs.currentTurn,
+    guesserId
+  });
+
+  startTtwlTimer(lobbyName, () => {
+    // If the guesser times out, mark no-guess and move on
+    const entry = {
+      owner: set.ownerName,
+      statements: set.statements,
+      lieIndex: set.lieIndex,
+      guesser: lobby.players.find(p => p.id === guesserId)?.name || 'Player',
+      guessIndex: null,
+      correct: false,
+      ts: Date.now()
+    };
+    gs.history.unshift(entry);
+    io.to(lobbyName).emit('ttwlRoundCompleted', entry);
+    nextTtwlTurn(lobbyName);
+  });
+}
 
 
 
@@ -667,6 +1733,123 @@ function startDareRound(lobbyName) {
     currentTurn: playerId
   });
 }
+
+
+// ✅ CREATE ACCOUNT HANDLER
+app.post('/create-account', upload.single('profilePic'), (req, res) => {
+  const { oldUsername, username, gender, dob, password, town, state } = req.body;
+  const profilePic = req.file?.filename;
+
+  if (!username || !password || !gender || !dob || !town || !state || !profilePic) {
+    return res.status(400).send("Missing required fields.");
+  }
+
+  const users = JSON.parse(fs.readFileSync(usersPath, 'utf-8'));
+  const existing = users.find(u => u.username === username);
+
+  if (existing) {
+    return res.send(`<h2>❌ Username already exists.</h2><a href="/create-account.html">Try Again</a>`);
+  }
+
+  users.push({ username, password, gender, dob, town, state, profilePic, extraImages: [] });
+  fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+
+  res.redirect(`/index.html?status=created&user=${encodeURIComponent(username)}`);
+});
+
+
+// ✅ SIGN IN HANDLER
+app.post('/sign-in', (req, res) => {
+  const { username, password } = req.body;
+
+  if (!fs.existsSync(usersPath)) {
+    fs.writeFileSync(usersPath, '[]');
+  }
+
+  let users = [];
+  try {
+    users = JSON.parse(fs.readFileSync(usersPath, 'utf-8') || '[]');
+  } catch (err) {
+    return res.status(500).send("Server error.");
+  }
+
+  const user = users.find(u => u.username === username && u.password === password);
+
+  if (!user) {
+    // Render the HTML manually with an error message injected
+    const signinHTML = fs.readFileSync(path.join(__dirname, 'signin.html'), 'utf-8');
+    const injected = signinHTML.replace(
+      '<!-- ERROR_MESSAGE -->',
+      `<div class="alert alert-danger text-center">❌ Invalid credentials</div>`
+    );
+    return res.send(injected);
+  }
+
+res.redirect(`/index.html?status=loggedin&user=${encodeURIComponent(username)}`);
+});
+
+app.post('/update-profile', upload.fields([
+  { name: 'profilePic', maxCount: 1 },
+  { name: 'extraImages', maxCount: 10 }
+]), (req, res) => {
+  const { oldUsername, username, gender, dob, password } = req.body;
+  const newPic = req.files?.profilePic?.[0]?.filename;
+  const extraImages = req.files?.extraImages?.map(f => f.filename) || [];
+
+  if (!oldUsername || !username) return res.status(400).send('Missing username.');
+
+  if (!fs.existsSync(usersPath)) return res.status(500).send("User data file not found.");
+
+  let users;
+  try {
+    users = JSON.parse(fs.readFileSync(usersPath, 'utf-8') || '[]');
+  } catch {
+    return res.status(500).send("Error reading user file.");
+  }
+
+  const user = users.find(u => u.username === oldUsername);
+  if (!user) return res.status(404).send("User not found.");
+
+  // Update all editable fields
+  user.username = username;
+  user.gender = gender;
+  user.dob = dob;
+  if (password?.trim()) user.password = password;
+  if (newPic) user.profilePic = newPic;
+  user.extraImages = [...(user.extraImages || []), ...extraImages];
+
+  fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+  res.status(200).send("Profile updated.");
+});
+
+
+
+
+app.get('/profile-data', (req, res) => {
+  const { username } = req.query;
+  if (!username) return res.json({ error: "Username is required." });
+
+  if (!fs.existsSync(usersPath)) {
+    return res.json({ error: "No users found." });
+  }
+
+  let users = [];
+  try {
+    users = JSON.parse(fs.readFileSync(usersPath, 'utf-8') || '[]');
+  } catch (err) {
+    return res.json({ error: "Error loading user data." });
+  }
+
+  const user = users.find(u => u.username === username);
+  if (!user) {
+    return res.json({ error: "User not found." });
+  }
+
+  // Return user data (omit password for security)
+  const { password, ...safeUser } = user;
+  res.json(safeUser);
+});
+
 
 
   function nextTurn(lobbyName) {

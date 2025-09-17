@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Would You Rather — Love Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="/socket.io/socket.io.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <style>
+    :root{
+      --bg1:#ff6b9d;
+      --bg2:#ff8fb3;
+      --bg3:#ffd1e1;
+      --glass: rgba(255,255,255,0.45);
+      --stroke: rgba(255,255,255,0.8);
+      --text:#4a3a47;
+      --muted:#7a5b6b;
+      --accent:#ff2e7a;
+      --accent-2:#9a2cff;
+      --success:#2ecc71;
+      --danger:#ff5c75;
+      --chip:#ffe7f1;
+      --shadow: 0 20px 40px rgba(255, 46, 122, 0.2);
+    }
+
+    *{ box-sizing: border-box; }
+
+    body{
+      min-height:100vh;
+      margin:0;
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #ffffff40, transparent 60%),
+        radial-gradient(1200px 600px at 110% 110%, #ffffff4a, transparent 60%),
+        linear-gradient(135deg, var(--bg1), var(--bg2) 50%, var(--bg3));
+      position:relative;
+      overflow-x:hidden;
+      padding: 28px 20px 60px;
+    }
+
+    /* floating hearts */
+    .hearts::before,
+    .hearts::after {
+      content:"❤";
+      position: fixed;
+      font-size: 72px;
+      color: #ffffff50;
+      animation: float 12s linear infinite;
+      pointer-events:none;
+      z-index:0;
+    }
+    .hearts::before { top:10%; left:-40px; animation-delay: 0s; }
+    .hearts::after  { bottom:-40px; right:-20px; animation-delay: 4s; }
+    @keyframes float {
+      0%   { transform: translateY(0) rotate(0); opacity:.6; }
+      50%  { opacity:.35; }
+      100% { transform: translateY(-120vh) rotate(20deg); opacity:0; }
+    }
+
+    h1{
+      font-size: clamp(2.2rem, 3vw + 1rem, 3.2rem);
+      text-align:center;
+      margin:0 0 22px;
+      line-height:1.1;
+      color:#fff;
+      text-shadow: 0 2px 20px rgba(255,255,255,.25);
+    }
+    .subtitle{
+      text-align:center;
+      color:#ffe9f2;
+      margin-top:-6px;
+      margin-bottom:26px;
+      font-weight:600;
+      letter-spacing:.2px;
+    }
+
+    .container-love{
+      max-width: 1100px;
+      margin: 0 auto;
+      position:relative;
+      z-index:1;
+      display:grid;
+      gap:24px;
+      grid-template-columns: 1.2fr 2fr;
+    }
+    @media (max-width: 980px){
+      .container-love{ grid-template-columns: 1fr; }
+    }
+
+    .section{
+      background: var(--glass);
+      border:1px solid var(--stroke);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 22px 22px;
+    }
+    .section .section-title{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:1.2rem;
+      color:var(--muted);
+      margin-bottom:14px;
+      letter-spacing:.2px;
+    }
+    .section .section-title .dot{
+      width:10px; height:10px; border-radius:50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 12px rgba(255,46,122,.45);
+    }
+
+    /* Inputs */
+    .form-control, input[type="text"], input[type="password"]{
+      border-radius: 14px !important;
+      border:1px solid #ffffffb3 !important;
+      background: rgba(255,255,255,.7) !important;
+      transition: box-shadow .2s ease, transform .04s ease;
+    }
+    .form-control:focus{
+      box-shadow: 0 0 0 6px #ff2e7a26 !important;
+      transform: translateY(-1px);
+    }
+
+    .toggle-line{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 2px 2px;
+      color:var(--muted);
+      font-weight:600;
+    }
+
+    /* Buttons */
+    .btn-love{
+      display:inline-flex; align-items:center; justify-content:center;
+      gap:10px;
+      width:100%;
+      padding:12px 16px;
+      border:none;
+      border-radius: 999px;
+      font-weight:800;
+      letter-spacing:.3px;
+      color:white;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 12px 22px rgba(255,46,122,.25);
+      transition: transform .08s ease, box-shadow .2s ease, filter .25s ease;
+    }
+    .btn-love:hover{ transform: translateY(-2px); box-shadow: 0 16px 28px rgba(255,46,122,.32); filter:brightness(1.02);}
+    .btn-ghost{
+      background: #ffffffb2;
+      color: var(--accent);
+      border:1px solid #fff;
+    }
+    .btn-ghost:hover{
+      background: #fff; color: var(--accent);
+      box-shadow: 0 8px 18px rgba(255,255,255,.45);
+    }
+
+    /* Lobby items */
+    .lobby-list .lobby-item{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px;
+      background: #ffffffc4;
+      border:1px solid #fff;
+      border-radius: 16px;
+      padding: 12px 14px;
+      margin:10px 0;
+    }
+    .lobby-meta{
+      display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center;
+      color:var(--muted);
+      font-weight:600;
+    }
+    .chip{
+      padding:.2rem .6rem;
+      background: var(--chip);
+      border-radius: 999px;
+      border:1px solid #fff;
+      font-size:.85rem;
+      font-weight:700;
+      color:var(--accent);
+    }
+    .lobby-actions{ display:flex; gap:10px; }
+    .btn-join{
+      background: linear-gradient(135deg, #ff5aa1, #ff2e7a);
+      color:#fff; border:none; border-radius: 999px; padding:10px 16px; font-weight:800;
+    }
+    .btn-delete{
+      background: #ffffffd0; color:#c2185b; border:1px solid #fff; border-radius:999px; padding:10px 16px; font-weight:800;
+    }
+
+    /* Turn indicator */
+    .turn-indicator{
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-weight:800;
+      text-align:center;
+      background: #fff;
+      border:1px solid #fff;
+      box-shadow: 0 8px 16px rgba(0,0,0,.05);
+    }
+    .your-turn{ background: #e8fff1; border-color:#d8ffea; color:#0a7e3d; }
+    .their-turn{ background: #fff5f2; border-color:#ffe4dc; color:#a33b1c; }
+
+    /* Prompt */
+    .prompt{
+      border:2px dashed #ffc2da;
+      background: #fff;
+      border-radius: 20px;
+      text-align:center;
+      font-size: clamp(1.1rem, .9rem + 1vw, 1.4rem);
+      padding: 22px 18px;
+      margin: 16px 0 10px;
+    }
+
+    .choice-buttons{
+      display:flex; justify-content:center; gap:12px; flex-wrap:wrap;
+    }
+    .choice-buttons .btn{
+      min-width: 160px;
+      border:none;
+      padding: 12px 18px;
+      border-radius: 14px;
+      font-weight:800;
+      letter-spacing:.2px;
+      box-shadow: 0 10px 18px rgba(0,0,0,.07);
+      transition: transform .06s ease, filter .2s ease;
+    }
+    .choice-buttons .btn:hover{ transform: translateY(-2px); filter:brightness(1.04); }
+    #choice-a{ background: #e9fff2; color:#0d7a3b; }
+    #choice-b{ background: #ffedf1; color:#b1133a; }
+
+    /* Chat */
+    .chat-wrap{
+      background:#ffffffc9; border:1px solid #fff; border-radius: 16px;
+      padding: 14px; margin-top: 10px;
+    }
+    #wyr-chat-messages{
+      max-height: 260px; overflow-y:auto;
+      padding-right:6px;
+    }
+    #wyr-chat-messages .msg{
+      padding:8px 10px; border-radius:12px; margin:6px 0;
+      background:#fff; border:1px solid #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,.04);
+    }
+    #wyr-chat-input{
+      border-radius: 999px !important;
+      padding:12px 16px;
+    }
+    #wyr-chat-send{
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight:800;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color:#fff; border:none;
+    }
+    #wyr-typing{ color:var(--muted); padding-left:6px; }
+
+    /* History */
+    #wyr-history .history-item{
+      border-top: 1px dashed #ffd1e1;
+      padding: 10px 2px;
+      color: var(--muted);
+    }
+
+    /* Notification toast */
+    #notification{
+      position: fixed; right: 20px; top: 20px;
+      background: #2e1b25; color:#fff;
+      border-radius: 12px; padding: 12px 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.25);
+      display:none; z-index: 9999;
+    }
+
+    /* Center and shrink the lobby container */
+.container-love {
+  display: flex;
+  justify-content: center;
+}
+
+#lobby-section {
+  width: 50%;
+  min-width: 320px;
+}
+
+.creator-link{
+  color:#b3127d;            /* love-y pink */
+  font-weight:700;
+  text-decoration:none;
+}
+.creator-link:hover{
+  text-decoration:underline;
+  color:#7a0c55;
+}
+
+
+
+  </style>
+</head>
+<body class="hearts">
+  <h1>Would You Rather</h1>
+  <div class="subtitle">A cozy, turn‑based game for two ❤️</div>
+
+  <div class="container-love">
+    <!-- Left: Lobby -->
+    <div id="lobby-section" class="section">
+      <div class="section-title"><span class="dot"></span> Create or Join a Lobby</div>
+
+      <input type="text" id="lobby-name" placeholder="Lobby name" class="form-control mb-2" />
+      <input type="password" id="lobby-password" placeholder="Password (optional)" class="form-control mb-2" />
+      <div class="toggle-line">
+        <input type="checkbox" id="make-public" />
+        <label for="make-public" style="margin:0;">Make public</label>
+      </div>
+      <button id="create-lobby" class="btn-love mb-3">
+        <span>💗 Create Lobby</span>
+      </button>
+
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="section-title" style="margin:0;"><span class="dot"></span> Available Lobbies</div>
+        <span class="chip">Live</span>
+      </div>
+
+      <div id="lobby-list" class="lobby-list"></div>
+
+      <!-- keep for compatibility if you use it -->
+      <ul id="player-list" class="list-group mt-3" style="display:none;"></ul>
+    </div>
+
+    <!-- Right: Game -->
+    <div id="game-area" class="section" style="display:none;">
+      <div id="turn-indicator" class="turn-indicator">Waiting for players...</div>
+
+      <div class="chat-wrap">
+        <div class="section-title" style="margin-bottom:10px;"><span class="dot"></span> Chat</div>
+        <div id="wyr-chat-messages"></div>
+        <div class="d-flex gap-2 mt-2">
+          <input id="wyr-chat-input" type="text" class="form-control" placeholder="Type a sweet message..." />
+          <button id="wyr-chat-send">Send 💬</button>
+        </div>
+        <div id="wyr-typing" class="mt-1"></div>
+      </div>
+
+      <div class="prompt" id="wyr-prompt" style="display:none;"></div>
+
+      <div class="choice-buttons" id="choice-buttons" style="display:none;">
+        <button id="choice-a" class="btn">Option A</button>
+        <button id="choice-b" class="btn">Option B</button>
+      </div>
+
+      <div class="mt-3">
+        <div class="section-title"><span class="dot"></span> History</div>
+        <div id="wyr-history"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="notification"></div>
+
+  <script>
+    const socket = io();
+    const username = localStorage.getItem("username");
+    const turnIndicator = document.getElementById('turn-indicator');
+    const promptEl = document.getElementById('wyr-prompt');
+    const choiceBtns = document.getElementById('choice-buttons');
+    const historyEl = document.getElementById('wyr-history');
+    const gameArea = document.getElementById('game-area');
+    const lobbySection = document.getElementById('lobby-section');
+    const lobbyList = document.getElementById('lobby-list');
+
+    let currentLobby = null;
+    let isMyTurn = false;
+
+    if (!username) {
+      alert("You must be signed in.");
+      window.location.href = "/signin.html";
+    }
+
+    function showNotification(msg) {
+      const notif = document.getElementById('notification');
+      notif.textContent = msg;
+      notif.style.display = 'block';
+      setTimeout(() => notif.style.display = 'none', 4000);
+    }
+
+// inside your updatePlayersUI (or updatePlayerList)
+function updatePlayersUI(players){
+  const ul = document.getElementById('player-list');
+  if (!ul) return;
+  ul.innerHTML = players.map(p => `
+    <li class="list-group-item">
+      <a class="creator-link" href="/profile.html?username=${encodeURIComponent(p.name)}&readonly=1">
+        ${escapeHtml(p.name)}
+      </a>${p.id === socket.id ? ' (You)' : ''}
+    </li>
+  `).join('');
+}
+
+
+// --- WYR Chat wiring ---
+const wyrChatBox   = document.getElementById('wyr-chat-messages');
+const wyrChatInput = document.getElementById('wyr-chat-input');
+const wyrChatSend  = document.getElementById('wyr-chat-send');
+const wyrTypingEl  = document.getElementById('wyr-typing');
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+function appendWyrMsg({ from, text, ts }) {
+  const div = document.createElement('div');
+  const time = new Date(ts).toLocaleTimeString();
+  div.innerHTML = `<strong>${escapeHtml(from)}:</strong> ${escapeHtml(text)} <span style="opacity:.6;font-size:.8em">(${time})</span>`;
+  wyrChatBox.appendChild(div);
+  wyrChatBox.scrollTop = wyrChatBox.scrollHeight;
+}
+
+// Send
+wyrChatSend.addEventListener('click', () => {
+  const text = wyrChatInput.value.trim();
+  if (!text) return;
+  socket.emit('wyrChat:send', { text });
+  wyrChatInput.value = '';
+});
+
+// Enter to send + typing indicator
+wyrChatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    wyrChatSend.click();
+    return;
+  }
+  socket.emit('wyrChat:typing', { typing: true });
+  clearTimeout(wyrChatInput._typingTimer);
+  wyrChatInput._typingTimer = setTimeout(() => {
+    socket.emit('wyrChat:typing', { typing: false });
+  }, 1200);
+});
+
+// Receive messages
+socket.on('wyrChat:msg', (msg) => {
+  appendWyrMsg(msg);
+});
+
+// Typing indicator
+socket.on('wyrChat:typing', ({ from, typing }) => {
+  wyrTypingEl.textContent = typing ? `${from} is typing…` : '';
+});
+
+function renderWyrPlayers(players) {
+  const listEl = document.getElementById("player-list");
+  listEl.innerHTML = "";
+
+  players.forEach(p => {
+    const li = document.createElement("li");
+    li.className = "list-group-item";
+
+    // clickable name
+    const nameEl = document.createElement("span");
+    nameEl.textContent = p.name;
+    nameEl.className = "profile-link";
+    nameEl.style.cursor = "pointer";
+    nameEl.onclick = () => {
+      window.location.href = `/profile.html?username=${encodeURIComponent(p.name)}`;
+    };
+
+    li.appendChild(nameEl);
+    listEl.appendChild(li);
+  });
+}
+
+
+
+
+function joinLobby(name, password = "") {
+      console.log("🚀 Emitting joinWyrLobby for", name, username); // ✅ Debug log here
+
+  socket.emit('joinWyrLobby', {
+    lobbyName: name,
+    password,
+    playerName: username
+  });
+  localStorage.setItem("lobbyName", name);
+  localStorage.setItem("playerName", username);
+}
+
+function updateTurnUI(currentPlayer) {
+  const turnIndicator = document.getElementById('turn-indicator');
+
+  if (turnIndicator) {
+    if (isMyTurn) {
+      turnIndicator.textContent = "YOUR TURN!";
+      turnIndicator.className = 'turn-indicator your-turn';
+    } else {
+      turnIndicator.textContent = `${currentPlayer}'s turn`;
+      turnIndicator.className = 'turn-indicator their-turn';
+    }
+  }
+}
+
+
+
+    document.getElementById('create-lobby').addEventListener('click', () => {
+      const name = document.getElementById('lobby-name').value;
+      const password = document.getElementById('lobby-password').value;
+      const isPublic = document.getElementById('make-public').checked;
+
+      if (!name) return showNotification("Lobby name required");
+
+socket.emit('createWyrLobby', { name, password, isPublic, username });
+
+console.log("🚀 Emitting createWyrLobby for", name, username);
+
+
+
+      localStorage.setItem("lobbyName", name);
+      localStorage.setItem("playerName", username);
+    });
+
+socket.on('wyrLobbyList', (lobbies) => {
+  const listContainer = document.getElementById('lobby-list');
+  if (!listContainer) return;
+
+  listContainer.innerHTML = '';
+
+  if (!Array.isArray(lobbies) || lobbies.length === 0) {
+    listContainer.innerHTML = '<p>No public lobbies found.</p>';
+    return;
+  }
+
+  lobbies.forEach((lobby) => {
+    const creatorName = lobby.creator ?? 'Unknown';
+// creator link in the lobby list
+const creatorLink = creatorName && creatorName !== 'Unknown'
+  ? `<a class="creator-link" href="/profile.html?username=${encodeURIComponent(creatorName)}&readonly=1">${escapeHtml(creatorName)}</a>`
+  : 'Unknown';
+;
+
+    const lobbyItem = document.createElement('div');
+    lobbyItem.className = 'lobby-item';
+    lobbyItem.innerHTML = `
+      <strong>${escapeHtml(lobby.name)}</strong>
+      (${lobby.count}/2) · Creator: ${creatorLink}
+      ${lobby.isPublic ? '' : ' 🔒 Private'}
+      <button class="join-btn" data-name="${escapeHtml(lobby.name)}" data-public="${lobby.isPublic ? '1':'0'}">Join</button>
+      <button class="delete-btn" data-name="${escapeHtml(lobby.name)}" data-public="${lobby.isPublic ? '1':'0'}">Delete</button>
+    `;
+    listContainer.appendChild(lobbyItem);
+  });
+
+
+  // Join click
+ // Use event delegation so we don't have to rebind after every refresh
+listContainer.onclick = (e) => {
+  const joinBtn = e.target.closest('.join-btn');
+  const delBtn  = e.target.closest('.delete-btn');
+
+  if (joinBtn) {
+    const name = joinBtn.dataset.name;
+    const isPublic = joinBtn.dataset.public === '1';
+    const playerName = localStorage.getItem('username') || prompt('Enter your name:');
+    if (!playerName) return;
+
+    let password = '';
+    if (!isPublic) {
+      password = prompt(`Password for lobby "${name}":`) || '';
+    }
+    socket.emit('joinWyrLobby', { lobbyName: name, password, playerName });
+    return;
+  }
+
+  if (delBtn) {
+    const name = delBtn.dataset.name;
+    const isPublic = delBtn.dataset.public === '1';
+
+    if (isPublic) {
+      if (!confirm(`Delete public lobby "${name}"? (Only the creator can delete)`)) return;
+      socket.emit('deleteWyrLobby', { name });
+    } else {
+      const password = prompt(`Enter password to delete private lobby "${name}":`);
+      if (password == null) return;
+      socket.emit('deleteWyrLobby', { name, password });
+    }
+  }
+}
+})
+
+socket.on('deleteWyrLobbyError', (msg) => {
+  alert(msg || 'Failed to delete lobby.');
+});
+
+socket.on('deleteWyrLobbySuccess', ({ name }) => {
+  // Optional: toast/alert
+  console.log(`Lobby "${name}" deleted.`);
+  // Ask server for a fresh list
+  socket.emit('getWyrLobbies');
+});
+
+socket.on('wyrLobbyDeleted', ({ name, by }) => {
+  // If you're inside that lobby, bounce user back to lobby list
+  const current = window.currentWyrLobby;
+  if (current === name) {
+    alert(`Lobby "${name}" was deleted by ${by || 'someone'}.`);
+    // Show lobby list UI again
+    const lobbySection = document.getElementById('lobby-section');
+    const gameArea = document.getElementById('game-area');
+    if (lobbySection) lobbySection.style.display = 'block';
+    if (gameArea) gameArea.style.display = 'none';
+    window.currentWyrLobby = null;
+  }
+  // Refresh list
+  socket.emit('getWyrLobbies');
+});
+
+
+socket.on('wyrLobbyJoined', ({ lobbyName, gameState, players, chat }) => {
+  // Make sure these exist in your HTML
+  if (typeof lobbySection !== 'undefined') lobbySection.style.display = 'none';
+  if (typeof gameArea !== 'undefined') gameArea.style.display = 'block';
+
+  console.log('Joined WYR lobby:', lobbyName);
+
+  // Optional: store for later
+  window.currentWyrLobby = lobbyName;
+
+  // Render existing chat history (if any)
+if (Array.isArray(chat)) {
+  chat.forEach(appendWyrMsg);
+}
+
+
+  // Update player list if you have a renderer
+  if (typeof updatePlayersUI === 'function') {
+    updatePlayersUI(players);
+  } else if (typeof updatePlayerList === 'function') {
+    updatePlayerList(players);
+  } else {
+    // no-op; just avoid throwing
+  }
+
+  // Safely resolve current turn name
+  const curTurnId = gameState?.currentTurn || null;
+  const curTurnName = curTurnId && gameState?.players?.[curTurnId]
+    ? gameState.players[curTurnId].name
+    : '';
+
+  // Is it my turn?
+  const myId = socket.id;
+  window.isMyTurn = (curTurnId === myId);
+
+  // If you have a WYR-specific timer, start that instead of ToD’s
+  if (window.isMyTurn) {
+    if (typeof startWyrTurnTimer === 'function') {
+      startWyrTurnTimer(gameState?.timeLeft ?? null); // optional
+    } else if (typeof startTurnTimer === 'function') {
+      // Reuse ToD timer ONLY if you intend to
+      startTurnTimer();
+    }
+  }
+
+  // Update your turn UI label
+  if (typeof updateTurnUI === 'function') {
+    updateTurnUI(curTurnName || '');
+  }
+
+  // If a prompt is already active (rejoin case), show it
+  if (gameState?.currentPrompt) {
+    if (typeof showPrompt === 'function') {
+      // Reuse your existing UI (second arg is just a flag your function expects)
+      showPrompt(gameState.currentPrompt, true);
+    }
+  }
+});
+
+
+socket.on('newWyrPrompt', ({ prompt, currentTurn }) => {
+  if (promptEl) {
+    promptEl.textContent = prompt;
+    promptEl.style.display = 'block';
+  }
+  if (choiceBtns) choiceBtns.style.display = isMyTurn ? 'flex' : 'none';
+  submitInFlight = false; // new turn, allow submit
+});
+
+socket.on('turnUpdateWyr', (turnId, name) => {
+  isMyTurn = (socket.id === turnId);
+  if (turnIndicator) {
+    turnIndicator.textContent = isMyTurn ? 'Your Turn!' : `${name}'s Turn`;
+    turnIndicator.className = `turn-indicator ${isMyTurn ? 'your-turn' : 'their-turn'}`;
+  }
+  if (choiceBtns) choiceBtns.style.display = isMyTurn ? 'flex' : 'none';
+  submitInFlight = false;
+});
+
+socket.on('wyrRoundCompleted', (data) => {
+  if (historyEl) {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `<strong>${data.player}</strong> chose: ${data.choice}<br>Prompt: ${data.prompt}<br><small>${new Date(data.timestamp || Date.now()).toLocaleString()}</small>`;
+    historyEl.prepend(div);
+  }
+  if (promptEl) promptEl.style.display = 'none';
+  if (choiceBtns) choiceBtns.style.display = 'none';
+});
+
+// ✅ Pause/Resume hooks (optional but nice)
+socket.on('turnPausedWyr', ({ message }) => {
+  if (turnIndicator) {
+    turnIndicator.textContent = '⏸ Turn paused. Waiting for reconnection...';
+    turnIndicator.className = 'turn-indicator their-turn';
+  }
+});
+
+    document.getElementById('choice-a').addEventListener('click', () => {
+      socket.emit('submitWyrChoice', { choice: 'A' });
+    });
+
+    document.getElementById('choice-b').addEventListener('click', () => {
+      socket.emit('submitWyrChoice', { choice: 'B' });
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+  socket.emit('requestWyrLobbies'); // 🔥 Trigger backend to send lobbies
+});
+
+
+    socket.emit('getWyrLobbies');
+    setInterval(() => socket.emit('getWyrLobbies'), 5000);
+  </script>
+</body>
+</html>

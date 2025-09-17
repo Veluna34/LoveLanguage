@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Two Truths, One Lie</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="/socket.io/socket.io.js"></script>
+
+  <!-- Unique modern font so it doesn't match Truth/Dare -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+ <!-- Replace your <style> block with this -->
+<style>
+:root {
+    --bg1: #4600ff;
+    --bg2: #c000ff;
+    --bg3: #c7c4e9;
+    --glass: rgb(250 246 255 / 65%);
+    --glass-deep: rgb(255 255 255 / 72%);
+    --stroke: rgb(214 51 118 / 13%);
+    --text: #000000;
+    --muted: #000000;
+    --primary: #714eff;
+    --primary-2: #ff1ee8;
+    --accent: #9d7785;
+    --success: #3d9b8a;
+    --warning: #ecbc5c;
+    --error: #e06666;
+    --shadow: 0 10px 40px rgb(255 79 139 / 9%);
+    --radius: 18px;
+}
+
+.main {
+  display: flex;
+  justify-content: center;
+}
+
+  *{box-sizing:border-box;font-family:'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, sans-serif}
+  html, body {
+    height:100%;
+    margin:0;
+    color:var(--text);
+    background:
+      radial-gradient(1000px 700px at 15% -10%, #ffd2e2 0%, transparent 55%),
+      radial-gradient(900px 600px at 110% 5%, #ffcadd 0%, transparent 55%),
+      linear-gradient(180deg, var(--bg1), var(--bg2) 55%, var(--bg3));
+    background-attachment: fixed;
+  }
+
+  /* Floating soft hearts in the background */
+  .love-aura{
+    position:fixed; inset:-10% -10% auto -10%; height:55vh; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(closest-side at 40% 40%, rgba(255,111,162,.35), transparent 60%),
+      radial-gradient(closest-side at 60% 60%, rgba(255,154,192,.25), transparent 60%),
+      radial-gradient(closest-side at 50% 30%, rgba(255,79,139,.25), transparent 60%);
+    filter:blur(40px);
+    animation: floaty 18s ease-in-out infinite alternate;
+  }
+  @keyframes floaty {
+    0% { transform:translateY(0) scale(1); opacity:.9; }
+    100%{ transform:translateY(-18px) scale(1.06); opacity:.75; }
+  }
+
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px; /* wider overall container */
+  margin: 32px auto;
+  padding: 0 16px;
+}
+  header.appbar{
+    border:1px solid var(--stroke);
+    background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.75));
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+    display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .mark{
+    width:48px; height:48px; border-radius:50%;
+    background:
+      radial-gradient(circle at 60% 40%, #fff 0 30%, transparent 31%),
+      conic-gradient(from 220deg, #ff6fa2, #ff9ac0, #ff4f8b, #ff6fa2);
+    box-shadow: 0 0 0 3px rgba(255,255,255,.8), 0 10px 24px rgba(255,79,139,.25);
+    position: relative;
+  }
+  /* tiny heart cutout */
+  .mark::after{
+    content:"";
+    position:absolute; left:14px; top:14px; width:18px; height:16px;
+    background:
+      radial-gradient(circle at 30% 35%, #ff4f8b 58%, transparent 59%),
+      radial-gradient(circle at 70% 35%, #ff4f8b 58%, transparent 59%),
+      linear-gradient(#ff4f8b, #ff4f8b) ;
+    background-repeat:no-repeat;
+    background-size: 50% 50%, 50% 50%, 70% 70%;
+    background-position: 0 0, 100% 0, 50% 60%;
+    transform:translate(-2px,-2px) rotate(45deg);
+    border-radius:3px;
+    filter: drop-shadow(0 1px 2px rgba(255,79,139,.4));
+  }
+  h1.title{ margin:0; font-size:1.6rem; letter-spacing:.3px; }
+  .subtitle{ margin:2px 0 0 60px; color:var(--muted); font-size:.95rem; }
+
+  .pill{
+    color:#7a2945;
+    background: linear-gradient(90deg, #ffd5e4, #ffe7ef);
+    border:1px solid rgba(255,79,139,.25);
+    border-radius:999px;
+    padding:10px 14px;
+    font-weight:700; letter-spacing:.3px;
+    box-shadow: 0 6px 18px rgba(255,79,139,.18);
+  }
+
+.grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* equal space for lobby & game */
+  gap: 40px; /* more spacing between */
+  justify-content: center; /* centers the two columns */
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr; /* stack on mobile */
+    gap: 20px;
+  }
+}
+  .card{
+    border:1px solid var(--stroke);
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding:18px;
+  }
+  .card h2{ margin:0 0 12px; font-size:1.1rem; color:#7a2945; letter-spacing:.2px; }
+
+  hr.sep{
+    border:none; height:1px;
+    background: linear-gradient(90deg, transparent, rgba(255,79,139,.45), transparent);
+    margin:14px 0;
+  }
+
+  .stack{ display:grid; gap:10px; }
+  .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:520px){ .row{ grid-template-columns:1fr; } }
+
+  input[type="text"], input[type="password"]{
+    width:100%; padding:12px 14px; border-radius:14px;
+    border:1px solid rgba(255,79,139,.25);
+    background: rgba(255,255,255,.9);
+    color:var(--text); outline:none; transition:.2s border, .2s box-shadow;
+  }
+  input::placeholder{ color:#ad7b8e; }
+  input:focus{ border-color: var(--primary); box-shadow: 0 0 0 4px rgba(255,79,139,.15); }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:12px 14px; border-radius:14px; border:none; cursor:pointer;
+    font-weight:700; letter-spacing:.3px;
+  }
+  .btn-primary{
+    background: linear-gradient(90deg, var(--primary), var(--primary-2));
+    color:#fff; box-shadow: 0 10px 25px rgba(255,79,139,.25);
+  }
+  .btn-primary:hover{ transform: translateY(-1px); }
+  .btn-ghost{
+    background: rgba(255,255,255,.85);
+    color: var(--text);
+    border: 1px solid rgba(255,79,139,.25);
+  }
+
+  #ttwl-lobby-list{ display:grid; gap:10px; margin-top:8px; }
+  .lobby-item{
+    display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;
+    border:1px dashed rgba(255,79,139,.35);
+    background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.75));
+    padding:12px; border-radius:14px;
+  }
+
+  /* Center & enlarge the lobby section */
+#lobby-section {
+  width: min(800px, 100%);
+  margin: 0 auto;                /* center horizontally */
+  text-align: center;
+  padding: 30px 24px;
+  background: var(--glass-deep, rgba(255,255,255,0.75));
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,79,139,.25);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(255, 107, 157, 0.25);
+}
+
+#lobby-section,
+#game-area {
+  width: 100% !important;
+  max-width: 650px !important; /* make each section bigger */
+  margin: 0 auto !important; /* center each card inside its column */
+}
+
+#lobby-section h2.section-title {
+  font-size: 1.4rem;
+}
+
+#lobby-section .two-col {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+#ttwl-lobby-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+#ttwl-lobby-list .lobby-item {
+  width: 100%;
+  max-width: 560px;
+}
+
+
+.lobby-item {
+  width: 100%;
+  max-width: 500px;
+}
+
+  .meta{ color:var(--muted); font-size:.95rem; }
+  .name-chip{
+    display:inline-block; padding:4px 10px; border-radius:999px;
+    background: linear-gradient(90deg, #ffe0ea, #ffd1e0);
+    color:#7a2945; text-decoration:none; font-weight:700;
+    border:1px solid rgba(255,79,139,.25);
+  }
+  .name-chip:hover{ filter:brightness(1.05); }
+
+  .turn-indicator{
+    margin-top:4px; border-radius:14px; padding:10px 12px; font-weight:700;
+    background:#fff; border:1px solid rgba(255,79,139,.25);
+  }
+  .turn-indicator.your{ outline:2px solid rgba(54,193,167,.35); }
+  .turn-indicator.their{ outline:2px solid rgba(255,204,102,.35); }
+
+  .timer{
+    margin-top:10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:1.05rem; padding:8px 10px; border-radius:10px;
+    background:#fff; border:1px solid rgba(255,79,139,.25); display:inline-block;
+  }
+
+  .prompt{
+    border:1px dashed rgba(255,79,139,.35);
+    background: rgba(255,255,255,.9);
+    border-radius:14px; padding:14px; margin:12px 0;
+  }
+
+  #submitter-ui, #guesser-ui{
+    border:1px solid rgba(255,79,139,.25);
+    background: var(--glass-deep);
+    border-radius: var(--radius);
+    padding:14px; margin-top:10px;
+  }
+
+  #guess-list{ display:grid; gap:8px; margin-top:8px; }
+  #guess-list .btn{
+    width:100%;
+    background:#fff;
+    border:1px solid rgba(255,79,139,.25);
+    color:var(--text);
+  }
+  #guess-list .btn:hover{
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(255,79,139,.12);
+  }
+
+  .container {
+  max-width: 1100px;
+}
+
+  #ttwl-history{ display:grid; gap:10px; }
+  .history-item{
+    border:1px solid rgba(255,79,139,.25);
+    background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.8));
+    border-radius:14px; padding:12px;
+  }
+  .history-item .small{ color:var(--muted); font-size:.9rem; }
+  ol.statements{ margin:6px 0 6px 20px; }
+
+  .chat-wrap{
+  border:1px solid rgba(255,79,139,.25);
+  background: var(--glass-deep);
+  border-radius: var(--radius);
+  padding:12px;
+}
+.chat-log{
+  height: 220px;
+  overflow-y: auto;
+  background: rgba(255,255,255,.85);
+  border:1px solid rgba(255,79,139,.18);
+  border-radius: 12px;
+  padding:10px;
+  display:flex;
+  flex-direction: column;
+  gap:8px;
+}
+.chat-msg{
+  background:#fff;
+  border:1px solid rgba(255,79,139,.12);
+  border-radius: 12px;
+  padding:8px 10px;
+  box-shadow: var(--shadow);
+}
+.chat-meta{
+  font-size:.82rem;
+  color:#7a2945;
+  margin-bottom:4px;
+  display:flex; gap:6px; align-items:center;
+}
+.chat-self .chat-msg{ outline:2px solid rgba(113,78,255,.14); }
+.chat-input-row{ display:flex; gap:8px; margin-top:8px; }
+#ttwl-chat-text{
+  flex:1; padding:10px 12px; border-radius:12px;
+  border:1px solid rgba(255,79,139,.25); background:#fff;
+}
+.chat-typing{ font-size:.9rem; color:#7a2945; margin-top:6px; opacity:.8; }
+
+</style>
+
+</head>
+<body>
+    <div class="love-aura"></div>
+
+
+  <div class="shell">
+    <header class="appbar">
+      <div>
+        <div class="brand">
+          <div class="mark"></div>
+          <h1 class="title">Two Truths, One Lie</h1>
+        </div>
+        <div class="subtitle">Craft three statements. Can your opponent spot the lie?</div>
+      </div>
+      <button class="pill">
+        <span id="player-count">0/2</span>
+      </button>
+    </header>
+
+    <div class="grid">
+      <!-- LOBBY / LEFT COLUMN -->
+      <section id="lobby-section" class="card">
+        <h2>Lobby</h2>
+        <div class="stack">
+          <div class="row">
+            <input id="ttwl-lobby-name" type="text" placeholder="Lobby name">
+            <input id="ttwl-lobby-password" type="password" placeholder="Password (private only)">
+          </div>
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="ttwl-make-public"> Make this a public lobby
+          </label>
+          <button id="ttwl-create-lobby" class="btn btn-primary">Create Lobby</button>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px; margin:6px 0 12px;">
+  <span style="height:1px; flex:1; background:linear-gradient(90deg, transparent, rgba(255,79,139,.5), transparent)"></span>
+  <span style="font-size:16px; color:#ff4f8b;">❤</span>
+  <span style="height:1px; flex:1; background:linear-gradient(90deg, transparent, rgba(255,79,139,.5), transparent)"></span>
+</div>
+
+
+        <hr class="sep">
+
+        <h2>Available Lobbies</h2>
+        <div id="ttwl-lobby-list"></div>
+      </section>
+
+
+
+
+      <!-- GAME / RIGHT COLUMN -->
+      <section id="game-area" class="card" style="display:none;">
+        <h2>Match</h2>
+        <hr class="sep">
+
+<h2>Chat</h2>
+<div id="ttwl-chat" class="chat-wrap">
+  <div id="ttwl-chat-log" class="chat-log" aria-live="polite"></div>
+  <div class="chat-input-row">
+    <input id="ttwl-chat-text" type="text" placeholder="Type a message…" autocomplete="off" />
+    <button id="ttwl-chat-send" class="btn btn-ghost" type="button">Send</button>
+  </div>
+  <div id="ttwl-typing" class="chat-typing" style="display:none;">Someone is typing…</div>
+</div>
+
+        <div id="ttwl-turn" class="turn-indicator their">Waiting for players…</div>
+        <span id="ttwl-timer" class="timer">--:--:--</span>
+
+        <!-- Submitter UI -->
+        <!-- Submitter UI -->
+<div id="submitter-ui" style="display:none;">
+            <h4>Choose Or Select The Lie</h4>
+
+  <div class="prompt">It’s your turn. Enter three statements and mark which one is the lie.</div>
+
+  <div class="row" style="margin-top:8px; align-items:center;">
+    <label style="display:flex; gap:8px; align-items:center; width:100%;">
+      <input type="radio" name="lie" value="0" aria-label="Statement 1 is the lie">
+      <input id="st1" placeholder="Statement 1" />
+    </label>
+    <label style="display:flex; gap:8px; align-items:center; width:100%;">
+      <input type="radio" name="lie" value="1" aria-label="Statement 2 is the lie">
+      <input id="st2" placeholder="Statement 2" />
+    </label>
+  </div>
+
+  <label style="display:flex; gap:8px; align-items:center; margin-top:10px; width:100%;">
+    <input type="radio" name="lie" value="2" aria-label="Statement 3 is the lie">
+    <input id="st3" placeholder="Statement 3" style="width:100%;" />
+  </label>
+
+  <button id="submit-set" class="btn btn-primary" style="margin-top:12px;" disabled>Submit Set</button>
+</div>
+
+        <!-- Guesser UI -->
+        <div id="guesser-ui" style="display:none;">
+                        <h4>Choose Or Select The Lie</h4>
+          <div class="prompt"><strong id="owner-name">Player</strong> submitted their statements. Which one is the lie?</div>
+          <div id="guess-list"></div>
+        </div>
+
+        
+
+        <hr class="sep">
+
+        <h2>History</h2>
+        <div id="ttwl-history"></div>
+      </section>
+
+
+    </div>
+  </div>
+
+
+<script>
+(() => {
+  const username = localStorage.getItem('username');
+  if (!username) {
+    alert('You must be logged in to play.');
+    window.location.href = 'signin.html';
+    return;
+  }
+
+  const socket = io();
+
+  // UI refs
+    let myId = socket.id;
+  const lobbySection = document.getElementById('lobby-section');
+  const gameArea = document.getElementById('game-area');
+  const playerCount = document.getElementById('player-count');
+  const lobbyList = document.getElementById('ttwl-lobby-list');
+  const turnEl = document.getElementById('ttwl-turn');
+  const timerEl = document.getElementById('ttwl-timer');
+  const submitterUI = document.getElementById('submitter-ui');
+  const guesserUI = document.getElementById('guesser-ui');
+  const ownerNameEl = document.getElementById('owner-name');
+  const historyEl = document.getElementById('ttwl-history');
+  // Chat refs
+const chatLog = document.getElementById('ttwl-chat-log');
+const chatInput = document.getElementById('ttwl-chat-text');
+const chatSend = document.getElementById('ttwl-chat-send');
+const typingEl = document.getElementById('ttwl-typing');
+let typingTimer = null;
+
+let currentTtwlLobby = null;
+
+  let isMyTurn = false;
+
+  // Create lobby
+  document.getElementById('ttwl-create-lobby').addEventListener('click', () => {
+    const name = document.getElementById('ttwl-lobby-name').value.trim();
+    const pw = document.getElementById('ttwl-lobby-password').value.trim();
+    const isPublic = document.getElementById('ttwl-make-public').checked;
+
+    if (!name) return alert('Enter a lobby name');
+    if (!isPublic && !pw) return alert('Private lobbies need a password');
+
+    socket.emit('createTtwlLobby', {
+      name,
+      password: pw,
+      isPublic,
+      username
+    });
+  });
+
+  // Request lobbies on load, and poll lightly
+  window.addEventListener('DOMContentLoaded', () => {
+    socket.emit('requestTtwlLobbies');
+    setInterval(() => socket.emit('requestTtwlLobbies'), 5000);
+  });
+
+  // Render lobby list
+  socket.on('ttwlLobbyList', (lobbies) => {
+    lobbyList.innerHTML = '';
+    if (!Array.isArray(lobbies) || !lobbies.length) {
+      lobbyList.innerHTML = '<p>No public lobbies found.</p>';
+      return;
+    }
+    lobbies.forEach(l => {
+      const row = document.createElement('div');
+      row.className = 'lobby-item';
+      row.innerHTML = `
+        <div>
+          <strong>${l.name}</strong> (${l.count}/2) · Creator:
+          <a class="name-chip" href="/profile.html?username=${encodeURIComponent(l.creator)}&readonly=1">${l.creator}</a>
+          ${l.isPublic ? '' : ' 🔒 Private'}
+        </div>
+        <div>
+          <button class="join" data-name="${l.name}" data-public="${l.isPublic ? '1':'0'}">Join</button>
+          <button class="del" data-name="${l.name}" data-public="${l.isPublic ? '1':'0'}">Delete</button>
+        </div>
+      `;
+      lobbyList.appendChild(row);
+    });
+
+    // Join
+    lobbyList.querySelectorAll('.join').forEach(btn => {
+      btn.onclick = async () => {
+        const lobbyName = btn.dataset.name;
+        const isPublic = btn.dataset.public === '1';
+        let password = '';
+        if (!isPublic) password = prompt(`Password for "${lobbyName}"`) || '';
+        socket.emit('joinTtwlLobby', { lobbyName, password, playerName: username });
+      };
+    });
+
+    // Delete
+    lobbyList.querySelectorAll('.del').forEach(btn => {
+      btn.onclick = async () => {
+        const lobbyName = btn.dataset.name;
+        const isPublic = btn.dataset.public === '1';
+        let pwd = '';
+        if (!isPublic) {
+          pwd = prompt(`Enter password to delete "${lobbyName}"`) || '';
+        }
+        socket.emit('deleteTtwlLobby', { lobbyName, password: pwd });
+      };
+    });
+  });
+
+  // Joined
+ // avoid duplicate listeners if you've added one before
+
+function sendTtwlChat() {
+  const text = (chatInput?.value || '').trim();
+  if (!text) {
+    console.log('[TTWL] chat: empty, not sending');
+    return;
+  }
+  if (!currentTtwlLobby) {
+    console.warn('[TTWL] chat: no lobby set');
+    return;
+  }
+  console.log('[CLI->SRV] ttwlChatMessage', { lobbyName: currentTtwlLobby, playerName: username, message: text });
+  socket.emit('ttwlChatMessage', { lobbyName: currentTtwlLobby, playerName: username, message: text });
+  chatInput.value = '';
+}
+
+// Bind once
+chatSend?.addEventListener('click', (e) => { e.preventDefault(); sendTtwlChat(); });
+chatInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); sendTtwlChat(); }
+});
+
+// Receive
+socket.off('ttwlChatMessage');
+socket.on('ttwlChatMessage', (entry) => {
+  // entry: { playerName, message, timestamp }
+  console.log('[SRV->CLI] ttwlChatMessage', entry);
+  addChatMessage({ from: entry.playerName, text: entry.message, ts: entry.timestamp });
+});
+
+function addChatMessage({ from, text, ts }) {
+  if (!chatLog) return;
+  const wrap = document.createElement('div');
+  wrap.className = from === username ? 'chat-self' : 'chat-other';
+
+  const msg = document.createElement('div');
+  msg.className = 'chat-msg';
+
+  const meta = document.createElement('div');
+  meta.className = 'chat-meta';
+  meta.textContent = `${from} • ${new Date(ts || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+
+  const body = document.createElement('div');
+  body.textContent = text;
+
+  msg.appendChild(meta);
+  msg.appendChild(body);
+  wrap.appendChild(msg);
+  chatLog.appendChild(wrap);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+
+
+
+socket.off('ttwlLobbyJoined');
+
+socket.on('ttwlLobbyJoined', (payload) => {
+  const { lobbyName, gameState, players, history, chat: chatHistory = [] } = payload;
+
+  // --- show game UI like before ---
+    lobbySection.style.display = 'none';
+  gameArea.style.display = 'block';
+  playerCount.textContent = `${players.filter(p=>!p.disconnected).length}/2`;
+  isMyTurn = (gameState.currentTurn === myId);
+  updateTurnUI(isMyTurn, gameState.players[gameState.currentTurn]?.name || '');
+
+    currentTtwlLobby = lobbyName;
+
+
+      if (chatLog) {
+    chatLog.innerHTML = '';
+    const msgs = (chatHistory.length ? chatHistory : (gameState.chat || [])).slice(-100);
+    msgs.forEach(m => addChatMessage({ from: m.playerName || m.from, text: m.message || m.text, ts: m.timestamp || m.ts }));
+  }
+
+  console.log('[TTWL] joined', lobbyName);
+
+  // --- history render (unchanged) ---
+  if (Array.isArray(history)) {
+    historyEl.innerHTML = '';
+    history.forEach(addHistoryItem);
+  }
+
+  // --- turn UI (unchanged) ---
+  isMyTurn = (gameState.currentTurn === myId);
+  updateTurnUI(isMyTurn, gameState.players[gameState.currentTurn]?.name || '');
+
+  // --- NEW: chat history (needs chatLog ref set earlier) ---
+  if (typeof addChatMessage === 'function' && typeof chatLog !== 'undefined' && chatLog) {
+    chatLog.innerHTML = '';
+    const msgs = (chatHistory.length ? chatHistory : (gameState.chat || [])).slice(-100);
+    msgs.forEach(msg => addChatMessage(msg));
+  }
+
+  // (optional) debug so you can confirm we got here
+  console.log('[TTWL] Joined lobby:', lobbyName, { you: myId, turn: gameState.currentTurn });
+});
+
+
+  socket.on('updatePlayers', (players) => {
+    playerCount.textContent = `${players.filter(p=>!p.disconnected).length}/2`;
+  });
+
+  socket.on('ttwlUpdateTimer', (secs) => {
+    timerEl.textContent = fmt(secs);
+  });
+
+  socket.on('ttwlTurnUpdate', (turnId, name) => {
+    isMyTurn = (socket.id === turnId);
+    updateTurnUI(isMyTurn, name);
+  });
+
+socket.on('ttwlAwaitingSet', ({ currentTurn, playerName }) => {
+  console.log('[SRV->CLI] ttwlAwaitingSet', { currentTurn, playerName, myId: socket.id });
+  const myTurn = (socket.id === currentTurn);
+  submitterUI.style.display = myTurn ? 'block' : 'none';
+  guesserUI.style.display = 'none';
+});
+
+
+  socket.on('ttwlShowSet', ({ ownerName, statements, guesserId }) => {
+    ownerNameEl.textContent = ownerName;
+    submitterUI.style.display = 'none';
+    // Only show guess UI if I'm the guesser
+    if (socket.id === guesserId) {
+      guesserUI.style.display = 'block';
+      renderGuessList(statements);
+    } else {
+      guesserUI.style.display = 'none';
+    }
+  });
+
+  socket.on('ttwlRoundCompleted', (entry) => {
+    submitterUI.style.display = 'none';
+    guesserUI.style.display = 'none';
+    addHistoryItem(entry);
+  });
+
+  // ---- Submit Set (single source of truth) ----
+const submitBtn = document.getElementById('submit-set');
+const s1El = document.getElementById('st1');
+const s2El = document.getElementById('st2');
+const s3El = document.getElementById('st3');
+
+
+function validateSubmitter() {
+  const s1 = (s1El?.value || '').trim();
+  const s2 = (s2El?.value || '').trim();
+  const s3 = (s3El?.value || '').trim();
+  const picked = !!document.querySelector('input[name="lie"]:checked');
+  if (submitBtn) submitBtn.disabled = !(s1 && s2 && s3 && picked);
+}
+
+// live validation
+[s1El, s2El, s3El].forEach(el => el.addEventListener('input', validateSubmitter));
+document.querySelectorAll('input[name="lie"]').forEach(r => r.addEventListener('change', validateSubmitter));
+validateSubmitter();
+
+submitBtn.addEventListener('click', () => {
+  const s1 = s1El.value.trim();
+  const s2 = s2El.value.trim();
+  const s3 = s3El.value.trim();
+  const lieRadio = document.querySelector('input[name="lie"]:checked');
+
+  if (!s1 || !s2 || !s3) return alert('Please enter all three statements.');
+  if (!lieRadio) return alert('Please mark which statement is the lie.');
+
+  const lieIndex = Number(lieRadio.value); // 0,1,2
+  console.log('[TTWL] submitting set', { s1, s2, s3, lieIndex });
+  socket.emit('ttwlSubmitSet', { statements: [s1, s2, s3], lieIndex });
+
+  // optional UX: lock button briefly to prevent doubles
+  submitBtn.disabled = true;
+  setTimeout(validateSubmitter, 250);
+});
+
+
+// Submit handler (safe)
+function onSubmitSet() {
+  const s1 = (document.getElementById('st1')?.value || '').trim();
+  const s2 = (document.getElementById('st2')?.value || '').trim();
+  const s3 = (document.getElementById('st3')?.value || '').trim();
+  const lieRadio = document.querySelector('input[name="lie"]:checked');
+
+  if (!s1 || !s2 || !s3) return alert('Please enter all three statements.');
+  if (!lieRadio) return alert('Please mark which statement is the lie.');
+
+  const lieIndex = Number(lieRadio.value);
+  socket.emit('ttwlSubmitSet', { statements: [s1, s2, s3], lieIndex });
+}
+
+if (submitBtn) submitBtn.addEventListener('click', onSubmitSet);
+
+// Initialize state
+validateSubmitter();
+
+
+  function renderGuessList(statements) {
+    const box = document.getElementById('guess-list');
+    box.innerHTML = '';
+    statements.forEach((txt, i) => {
+      const btn = document.createElement('button');
+      btn.style.display = 'block';
+      btn.style.width = '100%';
+      btn.style.margin = '6px 0';
+      btn.textContent = `#${i+1}: ${txt}`;
+      btn.onclick = () => socket.emit('ttwlGuess', { guessIndex: i });
+      box.appendChild(btn);
+    });
+  }
+
+  let submitBound = false;
+
+function showSubmitterUI() {
+  document.getElementById('submitter-ui').style.display = 'block';
+  if (!submitBound) {
+    const btn = document.getElementById('submit-set');
+    if (btn) {
+      btn.addEventListener('click', onSubmitSet, { once: false });
+      submitBound = true;
+    }
+  }
+}
+
+
+  document.addEventListener('DOMContentLoaded', () => {
+  const submitBtn = document.getElementById('submit-set');
+  const s1El = document.getElementById('st1');
+  const s2El = document.getElementById('st2');
+  const s3El = document.getElementById('st3');
+
+  if (!submitBtn || !s1El || !s2El || !s3El) return; // UI not ready
+
+  function validateSubmitter() {
+    const s1 = (s1El.value || '').trim();
+    const s2 = (s2El.value || '').trim();
+    const s3 = (s3El.value || '').trim();
+    const picked = !!document.querySelector('input[name="lie"]:checked');
+    submitBtn.disabled = !(s1 && s2 && s3 && picked);
+  }
+
+  // live validation
+  [s1El, s2El, s3El].forEach(el => el.addEventListener('input', validateSubmitter));
+  document.querySelectorAll('input[name="lie"]').forEach(r => r.addEventListener('change', validateSubmitter));
+  validateSubmitter();
+
+  submitBtn.addEventListener('click', () => {
+    const s1 = s1El.value.trim();
+    const s2 = s2El.value.trim();
+    const s3 = s3El.value.trim();
+    const lieRadio = document.querySelector('input[name="lie"]:checked');
+
+    if (!s1 || !s2 || !s3) return alert('Please enter all three statements.');
+    if (!lieRadio) return alert('Please mark which statement is the lie.');
+
+    const lieIndex = Number(lieRadio.value); // 0,1,2
+    socket.emit('ttwlSubmitSet', { statements: [s1, s2, s3], lieIndex });
+  });
+});
+
+
+
+  function addHistoryItem(entry) {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    const guessLabel = entry.guessIndex == null ? 'No guess' : `Guessed #${(entry.guessIndex+1)}`;
+    div.innerHTML = `
+      <div><strong>Owner:</strong> <a class="name-chip" href="/profile.html?username=${encodeURIComponent(entry.owner)}&readonly=1">${entry.owner}</a></div>
+      <div><strong>Statements:</strong>
+        <ol style="margin:6px 0 0 18px">
+          <li>${entry.statements[0]}</li>
+          <li>${entry.statements[1]}</li>
+          <li>${entry.statements[2]}</li>
+        </ol>
+      </div>
+      <div><strong>Lie was:</strong> #${entry.lieIndex+1}</div>
+      <div><strong>Guesser:</strong> ${entry.guesser}</div>
+      <div><strong>Result:</strong> ${entry.correct ? '✅ Correct' : '❌ Incorrect'} (${guessLabel})</div>
+      <div style="opacity:.7;font-size:.9rem">${new Date(entry.ts).toLocaleString()}</div>
+    `;
+    historyEl.prepend(div);
+  }
+
+  function updateTurnUI(mine, name) {
+    if (mine) {
+      turnEl.textContent = 'Your turn to submit a set';
+      turnEl.className = 'turn-indicator your';
+    } else {
+      turnEl.textContent = `${name}'s turn`;
+      turnEl.className = 'turn-indicator their';
+    }
+  }
+
+
+  function fmt(s) {
+    const h = Math.floor(s/3600);
+    const m = Math.floor((s%3600)/60);
+    const sec = s%60;
+    return [h,m,sec].map(x=>String(x).padStart(2,'0')).join(':');
+  }
+})();
+</script>
+</body>
+</html>

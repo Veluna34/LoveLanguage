@@ -1,0 +1,26 @@
+[
+  {
+    "username": "Aiden",
+    "password": "Aiden Figueroa",
+    "gender": "Male",
+    "dob": "2005-06-15",
+    "town": "Wayne",
+    "state": "New Jersey",
+    "profilePic": "1754528063090-21561532-IMG_0350.PNG",
+    "extraImages": [
+      "1756839036320-544646610-IMG_0350.PNG"
+    ],
+    "bio": "heyy"
+  },
+  {
+    "username": "Aiden2",
+    "password": "Aiden Figueroa2",
+    "gender": "Male",
+    "dob": "2024-12-19",
+    "town": "Pompton Lakes",
+    "state": "New Jersey",
+    "profilePic": "1754535106942-580779906-IMG_0350.PNG",
+    "extraImages": [],
+    "bio": "heyyyyyy"
+  }
+]

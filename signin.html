@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sign In - LoveLanguage</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #ffdee9, #b5fffc);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    form {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #d63384;
+      margin-bottom: 1rem;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 1rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.6rem;
+      margin-top: 0.25rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      width: 100%;
+      padding: 0.8rem;
+      background-color: #d63384;
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      margin-top: 1.5rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #b02a6e;
+    }
+
+    .extra-links {
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    .extra-links a {
+      color: #d63384;
+      text-decoration: none;
+    }
+
+    .extra-links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+
+<form action="/sign-in" method="POST">
+         <div id="error-message" class="alert alert-danger text-center d-none" role="alert"></div>
+  <h2>Sign In</h2>
+    <!-- ERROR_MESSAGE -->
+
+
+
+  <label for="username">Username</label>
+  <input type="text" id="username" name="username" required />
+
+  <label for="password">Password</label>
+  <input type="password" id="password" name="password" required />
+
+  <button type="submit">Sign In</button>
+
+  <div class="extra-links">
+    <p>Don't have an account? <a href="create-account.html">Create one</a></p>
+  </div>
+</form>
+
+</body>
+</html>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const error = params.get('error');
+  const errorBox = document.getElementById('error-message');
+
+  if (error === 'mustlogin') {
+    errorBox.textContent = "⚠️ You must sign in or create an account to view your profile.";
+    errorBox.classList.remove('d-none');
+  }
+
+const username = params.get('user');
+if (username) {
+  localStorage.setItem('username', username);
+  localStorage.setItem('playerName', username); // ✅ Optional but consistent
+}
+
+</script>
+
+

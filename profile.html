@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <!-- Cropper.js CSS -->
+<link href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(to right, #ffdee9, #b5fffc);
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2rem;
+      color: #333;
+    }
+
+    #modal-image {
+  max-width: 100%;
+  max-height: 400px;
+  display: block;
+  margin: 0 auto;
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
+
+    .profile-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      max-width: 500px;
+      margin: 2rem auto;
+      text-align: center;
+    }
+
+#profile-pic-preview {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+  border: 4px solid #d63384;
+}
+
+    .profile-card h2 {
+      color: #d63384;
+      margin-bottom: 1rem;
+    }
+
+    .profile-card p {
+      font-size: 1.1rem;
+    }
+
+    .error {
+      text-align: center;
+      color: red;
+      margin-top: 2rem;
+    }
+
+    .form-control,
+    .form-select {
+      max-width: 100%;
+      margin: 0 auto 1rem auto;
+    }
+
+.extra-images-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+.extra-image-card {
+  width: calc(50% - 10px); /* two items per row with spacing */
+  height: 250px;
+  border-radius: 12px;
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+
+.extra-image-card:hover {
+  transform: scale(1.05);
+}
+
+.extra-image-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+
+.extra-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.main-profile-pic {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 4px solid #ff1493;
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+
+.extra-image:hover {
+  transform: scale(1.03);
+}
+
+
+.extra-image:hover {
+  transform: scale(1.05);
+}
+
+.modal-content {
+  padding: 1.5rem;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  border: none;
+}
+
+.modal-header {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.modal-footer {
+  justify-content: center;
+  gap: 1rem;
+  border-top: none;
+  padding-top: 0.5rem;
+}
+
+#crop-confirm-btn {
+  background-color: #28a745;
+  border: none;
+  padding: 10px 20px;
+  font-weight: bold;
+  color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+#crop-cancel-btn {
+  background-color: #6c757d;
+  border: none;
+  padding: 10px 20px;
+  font-weight: bold;
+  color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+
+.custom-file-input-wrapper {
+  border: 2px dashed #ff69b4;
+  padding: 1rem;
+  border-radius: 10px;
+  background-color: #fff0f5;
+  text-align: center;
+  transition: background 0.3s ease;
+}
+
+.custom-file-input-wrapper:hover {
+  background-color: #ffe6f0;
+}
+
+.custom-file-input-wrapper input[type="file"] {
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  background: none;
+}
+
+.extra-image-card {
+  position: relative;
+}
+
+
+
+    #save-btn {
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<div id="profile-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
+<script>
+
+
+const params = new URLSearchParams(window.location.search);
+const loggedInUsername = localStorage.getItem('username');
+const username = params.get('username');
+const readonly = params.get('readonly') === '1';
+const isOwnProfile = !readonly && (username === loggedInUsername);
+let previewContainer = document.getElementById('selected-preview');
+
+
+
+  
+
+  if (!username) {
+    document.getElementById('profile-container').innerHTML =
+      '<p class="error">⚠️ No username provided in URL.</p>';
+  } else {
+    fetch(`/profile-data?username=${encodeURIComponent(username)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('profile-container').innerHTML =
+            `<p class="error">${data.error}</p>`;
+        } else {
+            const isOwnProfile = username === loggedInUsername;
+
+          document.getElementById('profile-container').innerHTML = `
+<form id="profile-form" class="profile-card" method="POST" action="/update-profile" enctype="multipart/form-data">
+  <img id="profile-pic-preview" class="main-profile-pic" src="/uploads/${data.profilePic}" alt="Profile Picture">
+  <h2>${data.username}</h2>
+
+<h6>
+  Click Edit Profile to Add Pictures Of Yourself Or A Fun Bio to Your Profile <br>
+  '
+</h6>
+
+
+              <div id="view-mode">
+${data.bio ? `<p><strong></strong> ${data.bio}</p>` : ''}
+
+    <p><strong>Age:</strong> <span id="age-text"></span></p>
+  <p><strong>Gender:</strong> <span id="gender-text">${data.gender}</span></p>
+
+  ${data.town && data.state ? `<p><strong>Location:</strong> ${data.town}, ${data.state}</p>` : ''}
+  
+  <div class="extra-images-grid mt-3">
+    ${(data.extraImages || []).map(img => `
+      <div class="extra-image-card position-relative">
+        <img class="extra-img" src="/uploads/${img}" alt="Extra Photo">
+        <button type="button" class="btn-close btn-sm position-absolute top-0 end-0 m-1 remove-extra-btn" data-filename="${img}" aria-label="Remove"></button>
+      </div>
+    `).join('')}
+  </div>
+  <input type="hidden" name="imagesToRemove" id="imagesToRemoveInput">
+
+${isOwnProfile ? `<button type="button" id="edit-btn" class="btn btn-outline-danger">✏️ Edit Profile</button>` : ''}
+  <a href="/index.html" class="btn btn-outline-secondary mt-3">🏠 Back to Games</a>
+
+</div>
+
+${isOwnProfile ? `
+
+              <div id="edit-mode" style="display:none;">
+
+                
+                <div class="mb-3">
+                    <label for="profilePic" class="form-label fw-bold mb-1">
+  📸 Select New Profile Picture
+</label>
+<input type="file" class="form-control border border-primary" id="profilePic" accept="image/*">
+<small class="text-muted d-block mb-2">This will replace your main profile photo</small>
+
+<label class="form-label"><strong>Bio</strong></label>
+<textarea class="form-control" name="bio" id="bio-input" rows="4">${data.bio || ''}</textarea>
+
+
+
+  <label class="form-label"><strong>Username</strong></label>
+<input type="text" class="form-control" id="username-input" name="username" value="${data.username}" disabled required >
+  <input type="hidden" name="oldUsername" value="${data.username}">
+
+  <label class="form-label"><strong>Gender</strong></label>
+
+                <select class="form-select" name="gender" id="gender-input" required>
+                  <option value="">Select Gender</option>
+                  <option ${data.gender === "Male" ? "selected" : ""}>Male</option>
+                  <option ${data.gender === "Female" ? "selected" : ""}>Female</option>
+                  <option ${data.gender === "Other" ? "selected" : ""}>Other</option>
+                </select>
+
+                  <label class="form-label"><strong>Date Of Birth</strong></label>
+                <input type="date" class="form-control" name="dob" id="dob-input" value="${data.dob}" required>
+
+                
+                <label for="town-input" class="form-label"><strong>Town</strong></label>
+<input type="text" class="form-control" name="town" id="town-input" value="${data.town || ''}" required>
+
+<label for="state-input" class="form-label"><strong>State</strong></label>
+<input type="text" class="form-control" name="state" id="state-input" value="${data.state || ''}" required>
+
+  <label class="form-label"><strong>Password</strong></label>
+                <input type="password" class="form-control" name="password" placeholder="New Password (optional)">
+
+                <!-- Profile Pic Upload -->
+
+
+
+<!-- Cropping Preview -->
+<div class="mt-3 text-center">
+  <img id="crop-preview" style="max-width: 100%; max-height: 300px; display: none;" />
+  <p class="text-muted small">Drag to crop your new profile picture</p>
+</div>
+
+
+                <!-- Inside #edit-mode -->
+                <button type="button" class="btn btn-outline-primary mb-3" id="upload-more-btn">📸 Upload More Photos</button>
+                <p id="selected-files" class="text-muted small mb-2"></p>
+<div id="selected-preview" class="extra-images-grid"></div>
+
+<input type="file" id="extraImages" name="extraImages" multiple accept="image/*" style="display: none;">
+                <button type="submit" id="save-btn" class="btn btn-danger">💾 Save Changes</button>
+              </div>
+
+              <button type="button" id="cancel-btn" class="btn btn-secondary ms-2">❌ Cancel</button>
+
+
+              <div id="save-msg" class="alert d-none mt-3"></div>
+            </form>
+          ` : ''}
+          </form>
+          `;
+
+          // Hide/disable editing if not your own profile or when readonly=1
+if (!isOwnProfile) {
+  // 1) Remove edit-mode section entirely
+  const editMode = document.getElementById('edit-mode');
+  if (editMode) editMode.remove();
+
+  // 2) Remove the Edit Profile button
+  const editBtn = document.getElementById('edit-btn');
+  if (editBtn) editBtn.remove();
+
+  // 3) Remove per-image delete (X) buttons
+  document.querySelectorAll('.remove-extra-btn').forEach(btn => btn.remove());
+
+  // 4) Prevent form submission just in case
+  const form = document.getElementById('profile-form');
+  if (form) form.removeAttribute('action');
+
+  // 5) Optional: remove the “Click Edit Profile...” helper text
+  document.querySelectorAll('.profile-card h6').forEach(h6 => h6.remove());
+}
+
+
+const editBtn = document.getElementById('edit-btn');
+if (editBtn) {
+  editBtn.addEventListener('click', () => {
+    document.getElementById('view-mode').style.display = 'none';
+    document.getElementById('edit-mode').style.display = 'block';
+    document.getElementById('username-input').disabled = false;
+  });
+}
+
+
+// Trigger the hidden file input when "Upload More Photos" is clicked
+// 📸 Trigger upload AND enter edit mode
+const uploadBtn = document.getElementById('upload-more-btn');
+if (uploadBtn) {
+  uploadBtn.addEventListener('click', () => {
+    const view = document.getElementById('view-mode');
+    const edit = document.getElementById('edit-mode');
+    if (view) view.style.display = 'none';
+    if (edit) edit.style.display = 'block';
+
+    const u = document.getElementById('username-input');
+    if (u) u.disabled = false;
+
+    const extra = document.getElementById('extraImages');
+    if (extra) extra.click();
+  });
+}
+
+
+const extraInput = document.getElementById('extraImages');
+const label = document.getElementById('selected-files');
+
+// Only attach the listener if all required elements exist
+if (extraInput && label && previewContainer) {
+  extraInput.addEventListener('change', () => {
+    const files = extraInput.files;
+
+    if (files && files.length > 0) {
+      label.textContent = `${files.length} image(s) selected`;
+      previewContainer.innerHTML = '';
+
+      for (const file of files) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const div = document.createElement('div');
+          div.className = 'extra-image-card';
+          div.innerHTML = `<img class="extra-img" src="${e.target.result}" alt="Preview">`;
+          previewContainer.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+      }
+    } else {
+      label.textContent = '';
+      previewContainer.innerHTML = '';
+    }
+  });
+}
+
+
+const cancelBtn = document.getElementById('cancel-btn');
+if (cancelBtn) {
+  cancelBtn.addEventListener('click', () => {
+    const edit = document.getElementById('edit-mode');
+    const view = document.getElementById('view-mode');
+    const uname = document.getElementById('username-input');
+
+    if (edit) edit.style.display = 'none';
+    if (view) view.style.display = 'block';
+    if (uname) uname.disabled = true;
+
+    // Optional: discard unsaved previews and inputs
+    location.reload();
+  });
+}
+
+
+
+// Calculate and display age from DOB
+function calculateAge(dobString) {
+  const dob = new Date(dobString);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age;
+}
+
+document.getElementById('age-text').textContent = calculateAge(data.dob);
+
+
+
+let cropper;
+
+const profilePicInput = document.getElementById('profilePic');
+const cropPreview = document.getElementById('crop-preview');
+
+if (profilePicInput && cropPreview) {
+  profilePicInput.addEventListener('change', (e) => {
+    const file = (e.target.files && e.target.files[0]) || null;
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      cropPreview.src = reader.result;
+      cropPreview.style.display = 'block';
+
+      const initCropper = () => {
+        try {
+          if (typeof cropper !== 'undefined' && cropper) {
+            cropper.destroy();
+          }
+        } catch {}
+
+        // assumes Cropper.js is loaded
+        cropper = new Cropper(cropPreview, {
+          aspectRatio: 1,
+          viewMode: 1,
+          autoCropArea: 1,
+          movable: true,
+          zoomable: true,
+          scalable: true,
+          cropBoxResizable: true,
+          responsive: true,
+        });
+      };
+
+      // If the image is already cached/loaded, onload may not fire
+      if (cropPreview.complete) {
+        initCropper();
+      } else {
+        // prevent stacking multiple onload handlers
+        cropPreview.onload = initCropper;
+      }
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+
+const extraImagesInput = document.getElementById('extraImages');
+const cropModal = new bootstrap.Modal(document.getElementById('cropperModal'));
+const modalImage = document.getElementById('modal-crop-image');
+const cropConfirmBtn = document.getElementById('crop-confirm-btn');
+
+let extraImageFiles = [];     // original File objects
+let croppedBlobs = [];        // cropped Blob objects (same order)
+let currentFileIndex = 0;
+let tempCropper;
+
+
+if (extraImagesInput) {
+  extraImagesInput.addEventListener('change', () => {
+    const files = extraImagesInput.files ? Array.from(extraImagesInput.files) : [];
+    if (!files.length) return;
+
+    // Ensure globals exist
+    if (typeof window.extraImageFiles === 'undefined') window.extraImageFiles = [];
+    if (typeof window.croppedBlobs === 'undefined') window.croppedBlobs = [];
+    if (typeof window.currentFileIndex === 'undefined') window.currentFileIndex = 0;
+
+    window.extraImageFiles = files;
+    window.croppedBlobs = new Array(files.length); // preallocate for cropped blobs
+    window.currentFileIndex = 0;
+
+    if (typeof startCroppingNextImage === 'function') {
+      startCroppingNextImage();
+    }
+  });
+}
+
+function renderCroppedPreviews() {
+  previewContainer.innerHTML = '';
+  croppedBlobs.forEach(blob => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const div = document.createElement('div');
+      div.className = 'extra-image-card';
+      div.innerHTML = `<img class="extra-img" src="${e.target.result}" alt="Preview">`;
+      previewContainer.appendChild(div);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+
+function startCroppingNextImage() {
+  if (currentFileIndex >= extraImageFiles.length) {
+    renderCroppedPreviews();
+    return;
+  }
+
+  const file = extraImageFiles[currentFileIndex];
+  const reader = new FileReader();
+
+  reader.onload = () => {
+  const modalImage = document.getElementById('modal-image'); // ✅ this line is missing
+  modalImage.src = reader.result;
+
+  // Destroy old cropper if exists
+  if (tempCropper) tempCropper.destroy();
+
+  // Show modal & start cropping
+  cropModal.show();
+
+  // ✅ Accessibility fix
+  const modalElement = document.getElementById('cropperModal');
+  modalElement.setAttribute('aria-hidden', 'false');
+
+  tempCropper = new Cropper(modalImage, {
+    aspectRatio: 1,
+    viewMode: 1,
+    autoCropArea: 1
+  });
+};
+
+
+  reader.readAsDataURL(file);
+}
+
+const imagesToRemove = new Set();
+document.querySelectorAll('.remove-extra-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const filename = btn.getAttribute('data-filename');
+
+    fetch('/delete-extra-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, filename })
+    })
+    .then(res => res.ok ? btn.parentElement.remove() : alert('Failed to delete image'))
+    .catch(() => alert('Error deleting image'));
+  });
+});
+
+
+
+// Confirm Crop
+cropConfirmBtn.addEventListener('click', () => {
+  const canvas = tempCropper.getCroppedCanvas({ width: 300, height: 300 });
+  canvas.toBlob(blob => {
+    croppedBlobs[currentFileIndex] = blob;
+    cropModal.hide();
+    currentFileIndex++;
+    startCroppingNextImage();
+  }, 'image/jpeg');
+});
+
+// Render cropped preview
+
+
+
+          // Handle save
+ // Handle save
+document.getElementById('profile-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const form = e.target;
+const formData = new FormData(form);
+
+// Append cropped extra images
+croppedBlobs.forEach((blob, index) => {
+  formData.append('extraImages', blob, `extra-${index}.jpg`);
+});
+
+  // ✅ Replace existing profilePic with cropped one (if available)
+  if (cropper) {
+    const canvas = cropper.getCroppedCanvas({
+      width: 300,
+      height: 300
+    });
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+    formData.set('profilePic', blob, 'cropped-profile.jpg'); // replaces the original
+  }
+
+  const res = await fetch('/update-profile', {
+    method: 'POST',
+    body: formData
+  });
+
+  const msg = document.getElementById('save-msg');
+  if (res.ok) {
+    msg.textContent = "✅ Profile updated!";
+    msg.className = "alert alert-success";
+    msg.classList.remove('d-none');
+    setTimeout(() => {
+      const newUsername = document.getElementById('username-input').value;
+      window.location.href = `profile.html?username=${encodeURIComponent(newUsername)}`;
+    }, 1500);
+  } else {
+    msg.textContent = "❌ Failed to update profile.";
+    msg.className = "alert alert-danger";
+    msg.classList.remove('d-none');
+  }
+});
+
+  }
+  }); // <-- closes .then(data => { ... })
+  }
+
+</script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<!-- Cropper Modal for Extra Images -->
+<div class="modal fade" id="cropperModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Crop Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+<img id="modal-image" src="" alt="Crop Preview" style="max-width: 100%; max-height: 400px;" />
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button id="crop-confirm-btn" class="btn btn-success">✅ Crop</button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+</body>
+</html>

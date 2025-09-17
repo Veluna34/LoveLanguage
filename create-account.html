@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create Account</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fbeaff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    form {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    h2 {
+      margin-bottom: 1rem;
+      text-align: center;
+      color: #d63384;
+    }
+
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-top: 0.25rem;
+    }
+
+    button {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: 0.8rem;
+      background: #d63384;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #b02a6e;
+    }
+  </style>
+</head>
+<body>
+
+<<form id="accountForm" action="/create-account" method="POST" enctype="multipart/form-data">
+  <h2>Create Account</h2>
+  
+  <label for="username">Username</label>
+  <input type="text" id="username" name="username" required>
+
+  <label for="password">Password</label>
+  <input type="password" id="password" name="password" required>
+
+  <label for="gender">Gender</label>
+  <select id="gender" name="gender" required>
+    <option value="">Select Gender</option>
+    <option value="Male">Male</option>
+    <option value="Female">Female</option>
+    <option value="Other">Other</option>
+  </select>
+
+  <label for="dob">Date of Birth</label>
+  <input type="date" id="dob" name="dob" required>
+
+  <!-- ✅ New: Town Field -->
+  <label for="town">Town</label>
+  <input type="text" id="town" name="town" required>
+
+  <!-- ✅ New: State Field -->
+  <label for="state">State</label>
+  <input type="text" id="state" name="state" required>
+
+  <label for="profilePic">Profile Picture (Choose A Picture Of Yourself)</label>
+  <input type="file" id="profilePic" name="profilePic" accept="image/*" required>
+
+  <button type="submit">Create Account</button>
+</form>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+const username = params.get('user');
+if (username) {
+  localStorage.setItem('username', username);
+  localStorage.setItem('playerName', username); // ✅ Optional but consistent
+}
+
+</script>
+
+</body>
+</html>

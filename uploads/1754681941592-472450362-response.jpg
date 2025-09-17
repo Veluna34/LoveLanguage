@@ -477,6 +477,7 @@ h3{
           
           <div id="dares-tab" class="tab-content">
             <div id="dares-history"></div>
+            <button onclick="document.getElementById('chat-messages').innerHTML += '<div><strong>Test:</strong> Hello</div>'">Test Append</button>
 
           </div>
         </div>
@@ -970,13 +971,27 @@ document.querySelectorAll('.tab').forEach(tab => {
         // If we completed a question, turn automatically switches
       });
       
+      socket.on('answerSubmitted', (answer) => {
+        addHistoryItem(answer, true);
+      });
       
-socket.on('answerSubmitted', (entry) => {
-  addHistoryItem(entry, entry.type === 'question');
-});
-
-     
-
+      socket.on('dareSubmitted', (dare) => {
+        addHistoryItem(dare, false);
+      });
+      
+      socket.on('timeout', () => {
+        showNotification("Time's up! Turn skipped And Streak Reset");
+        streak = 0;
+        updateStreakDisplay();
+        currentPromptSection.style.display = 'none';
+        stopCamera();
+      });
+      
+      socket.on('error', (message) => {
+        showNotification(message);
+      });
+    }
+    
     function showPrompt(text, isQuestion) {
       currentPromptSection.style.display = 'block';
       promptText.textContent = text;
@@ -1134,105 +1149,116 @@ function updateTimerDisplay() {
     }
     
     // Answer submission
-    // Answer submission
-async function submitAnswer() {
-  streak++;
-  updateStreakDisplay();
+    async function submitAnswer() {
+      streak++;
+console.log('Emitting submitAnswer', {
+  answer: answerText.value,
+  imageUrl: capturedImage.src,
+});
+      updateStreakDisplay();
 
-  if (!isMyTurn || !capturedImage.src) return;
-
-  submitAnswerBtn.disabled = true;
-  submitAnswerBtn.textContent = 'Uploading...';
-
-  try {
-    const blob = await fetch(capturedImage.src).then(res => res.blob());
-    const formData = new FormData();
-    formData.append('image', blob, 'response.jpg');
-
-    const response = await fetch('/upload', {
-      method: 'POST',
-      body: formData
-    });
-
-    const data = await response.json();
-
-    const answer = answerText.value.trim();
-
-    // Emit regardless of round type (handle in backend)
-    socket.emit('submitAnswer', {
-      answer: answer || '', // empty if dare
-      imageUrl: data.imageUrl,
-      dareImageUrl: currentDareImageUrl || ''
-    });
-
-    currentDareImageUrl = ''; // reset
-
-    // Reset UI
-    answerText.value = '';
-    capturedImage.src = '';
-    submitAnswerBtn.disabled = false;
-    submitAnswerBtn.textContent = 'Submit';
-
-  } catch (err) {
-    console.error('Error uploading image:', err);
-    showNotification('Failed to upload image. Please try again.');
-    submitAnswerBtn.disabled = false;
-    submitAnswerBtn.textContent = 'Submit';
-  }
-}
-
-
+      if (!isMyTurn || !capturedImage.src) {
+        return;
+      }
+      
+      submitAnswerBtn.disabled = true;
+      submitAnswerBtn.textContent = 'Uploading...';
+      
+      try {
+        const blob = await fetch(capturedImage.src).then(res => res.blob());
+        const formData = new FormData();
+        formData.append('image', blob, 'response.jpg');
+        
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (currentRoundType === 'question') {
+          const answer = answerText.value.trim();
+          if (!answer) {
+            showNotification('Please enter your answer');
+            submitAnswerBtn.disabled = false;
+            submitAnswerBtn.textContent = 'Submit';
+            return;
+          }
+          socket.emit('submitAnswer', { 
+            answer, 
+            imageUrl: data.imageUrl,
+            dareImageUrl: currentDareImageUrl // Include the dare image with the answer
+          });
+          currentDareImageUrl = ''; // Reset after submission
+        } else {
+          // For dares, store the image URL for the upcoming question
+          currentDareImageUrl = data.imageUrl;
+          socket.emit('completeDare', { imageUrl: data.imageUrl });
+        }
+        
+        // Reset form
+        answerText.value = '';
+        capturedImage.src = '';
+        submitAnswerBtn.disabled = false;
+        submitAnswerBtn.textContent = 'Submit';
+        
+      } catch (err) {
+        console.error('Error uploading image:', err);
+        showNotification('Failed to upload image. Please try again.');
+        submitAnswerBtn.disabled = false;
+        submitAnswerBtn.textContent = 'Submit';
+      }
+    }
     
     // History functions
     function updateHistory(history) {
-  questionsHistory.innerHTML = '';
-  daresHistory.innerHTML = '';
-
-  history.questions.forEach(item => {
-    const isDare = item.type === 'dare';
-    addHistoryItem(item, !isDare); // true for question, false for dare
-  });
-
-  history.dares.forEach(item => {
-    const isDare = item.type === 'dare';
-    addHistoryItem(item, !isDare); // true for question, false for dare
-  });
-}
-
-function addHistoryItem(item, isQuestion) {
-  const historyElement = isQuestion ? questionsHistory : daresHistory;
-  const itemElement = document.createElement('div');
-  itemElement.className = 'history-item';
-
-  if (isQuestion) {
-    itemElement.innerHTML = `
-      <div class="history-question">${item.question}</div>
-      <div class="history-answer">${item.answer}</div>
-      ${item.dareImageUrl ? `
-        <div class="dare-proof">Dare Proof:</div>
-        <img src="${item.dareImageUrl}" class="history-image" alt="Dare proof">
-      ` : ''}
-      ${item.imageUrl ? `
-        <div class="answer-proof">Answer Proof:</div>
-        <img src="${item.imageUrl}" class="history-image" alt="Answer proof">
-      ` : ''}
-      <div class="history-player">— ${item.player}</div>
-      <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
-    `;
-  } else {
-    itemElement.innerHTML = `
-      <div class="history-dare">${item.dare}</div> <!-- This is actually the dare -->
-      ${item.imageUrl ? `
-        <img src="${item.imageUrl}" class="history-image" alt="Dare proof">
-      ` : ''}
-      <div class="history-player">— ${item.player}</div>
-      <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
-    `;
-  }
-
-  historyElement.prepend(itemElement);
-}
+      questionsHistory.innerHTML = '';
+      daresHistory.innerHTML = '';
+      
+      history.questions.forEach(item => {
+        addHistoryItem(item, true);
+      });
+      
+      history.dares.forEach(item => {
+        addHistoryItem(item, false);
+      });
     }
+    
+    function addHistoryItem(item, isQuestion) {
+      const historyElement = isQuestion ? questionsHistory : daresHistory;
+      const itemElement = document.createElement('div');
+      itemElement.className = 'history-item';
+      
+      if (isQuestion) {
+        itemElement.innerHTML = `
+          <div class="history-question">${item.question}</div>
+          <div class="history-answer">${item.answer}</div>
+          ${item.dareImageUrl ? `
+            <div class="dare-proof">Dare Proof:</div>
+            <img src="${item.dareImageUrl}" class="history-image" alt="Dare proof">
+          ` : ''}
+          ${item.imageUrl ? `
+            <div class="answer-proof">Answer Proof:</div>
+            <img src="${item.imageUrl}" class="history-image" alt="Answer proof">
+          ` : ''}
+          <div class="history-player">— ${item.player}</div>
+          <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
+        `;
+      } else {
+        itemElement.innerHTML = `
+          <div class="history-dare">${item.dare}</div>
+          ${item.imageUrl ? `
+            <img src="${item.imageUrl}" class="history-image" alt="Dare proof">
+          ` : ''}
+          <div class="history-player">— ${item.player}</div>
+          <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
+        `;
+      }
+      
+      historyElement.prepend(itemElement);
+    }
+
+    
 
 
     
