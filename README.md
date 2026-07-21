@@ -1,153 +1,200 @@
-LoveLanguage
+# LoveLanguage
+
+**A real-time, two-player social game platform built with Node.js, Express, Socket.IO, and vanilla JavaScript.**
+
+LoveLanguage is a multiplayer web application designed to help two people connect through conversation-based games. Users can create accounts, build profiles, create public or password-protected lobbies, chat in real time, and play one of three turn-based games:
+
+* Truth or Dare
+* Would You Rather
+* Two Truths, One Lie
 
-LoveLanguage is a two-player multiplayer game hub designed to help people connect through conversation-based games. Players can create accounts, build profiles, create public or private lobbies, chat in real time, and play one of three games:
+The project is currently a functional prototype intended for local development and testing. It demonstrates real-time multiplayer state management, lobby lifecycle handling, turn systems, timers, reconnection support, media uploads, and browser-based profile workflows.
 
-Truth or Dare
+## Project Highlights
+
+* Built three real-time multiplayer games using Socket.IO
+* Implemented public and private two-player lobbies
+* Added lobby discovery, joining, deletion, and capacity validation
+* Managed turn state, round state, timers, chat, and game history
+* Added disconnect handling, reconnection support, and turn pausing
+* Created account, sign-in, profile-viewing, and profile-editing workflows
+* Implemented profile-image and gallery-image uploads with cropping
+* Added photo capture and upload support for Truth or Dare responses
+* Designed the application with Node.js, Express, HTML, CSS, and vanilla JavaScript
+* Documented current security limitations and a path toward production readiness
 
-Would You Rather
+## Why I Built It
+
+I built LoveLanguage to explore how real-time web applications coordinate multiple users across shared interactive experiences.
 
-Two Truths, One Lie
+Unlike a traditional single-page form or static website, a multiplayer game must keep two browsers synchronized while handling:
 
-The project uses Node.js, Express, Socket.IO, Multer, HTML, CSS, and browser-side JavaScript.
+* Player identity
+* Lobby membership
+* Turn ownership
+* Round progression
+* Timers
+* Chat messages
+* Disconnects
+* Reconnection
+* Shared game history
 
-Development status: Prototype / work in progress. The application is suitable for local development and testing, but its current authentication and data storage systems are not secure enough for production use.
+The project gave me practical experience designing event-driven systems where the server acts as the source of truth for active multiplayer state.
+
+## Core Features
 
-Features
+### Accounts and Profiles
 
-Accounts and profiles
+Users can:
 
-Create an account with a username and password
-
-Add gender, date of birth, town, and state
-
-Upload a profile picture
-
-Sign in with an existing account
-
-View your own profile or another player's profile
-
-Edit profile information
-
-Add a profile bio
-
-Upload and crop profile and gallery images
-
-Remove extra profile images
-
-Open player profiles from lobby lists
-
-Calculate and display age from the saved date of birth
-
-Multiplayer lobbies
-
-Two-player game rooms
-
-Public lobbies that appear in the lobby browser
-
-Private lobbies protected by a password
-
-Lobby creator information
-
-Join and delete lobby controls
-
-Player count displays
-
-Reconnection handling
-
-Turn pausing when a player disconnects
-
-Real-time updates through Socket.IO
-
-Truth or Dare
-
-Random truth questions and dares
-
-Custom questions and dares
-
-Turn-based gameplay
-
-Lobby chat
-
-Turn timer
-
-Camera capture and image upload
-
-Photo proof for answers and dares
-
-Separate truth and dare history
-
-Answer streak display
-
-Would You Rather
-
-Turn-based two-player rounds
-
-Random Would You Rather prompts
-
-Option A and Option B choices
-
-Real-time chat and typing indicators
-
-Round history
-
-Turn updates and reconnection support
-
-Two Truths, One Lie
-
-One player enters three statements
-
-The submitting player selects which statement is the lie
-
-Statements are shuffled before being shown
-
-The other player guesses the lie
-
-Correct and incorrect results
-
-Match history
-
-Real-time chat
-
-Turn timer and reconnection handling
-
-Technology stack
-
-Backend
-
-Node.js
-
-Express 5
-
-Socket.IO 4
-
-Multer
-
-Node.js fs, path, and http modules
-
-Frontend
-
-HTML5
-
-CSS3
-
-Vanilla JavaScript
-
-Bootstrap 5 on selected pages
-
-Cropper.js for image cropping
-
-Socket.IO client
-
-Data storage
-
-users.json stores account and profile information
-
-uploads/ stores uploaded profile and game images
-
-Active lobby and game state is stored in server memory
-
-Project structure
-
+* Create an account with a username and password
+* Sign in with an existing account
+* Add profile information such as gender, date of birth, town, state, and bio
+* Upload a profile picture
+* Upload, crop, and remove gallery images
+* Edit saved profile information
+* View their own profile or another player's profile
+* Open player profiles directly from lobby lists
+* Display age based on the saved date of birth
+
+### Multiplayer Lobby System
+
+Each game supports two-player rooms with:
+
+* Public lobbies listed in a lobby browser
+* Private lobbies protected by a password
+* Lobby creator information
+* Join and delete controls
+* Player-count updates
+* Two-player capacity checks
+* Real-time lobby updates
+* Disconnect detection
+* Turn pausing when a player disconnects
+* Reconnection handling
+
+## Games
+
+### Truth or Dare
+
+Truth or Dare includes:
+
+* Random truth questions and dares
+* Custom player-submitted prompts
+* Turn-based gameplay
+* Lobby chat
+* Turn timers
+* Answer streak tracking
+* Separate truth and dare history
+* Camera capture and image upload
+* Photo proof for answers and dares
+* Reconnection support
+
+### Would You Rather
+
+Would You Rather includes:
+
+* Turn-based two-player rounds
+* Random prompts
+* Option A and Option B selections
+* Real-time chat
+* Typing indicators
+* Round history
+* Turn synchronization
+* Reconnection support
+
+### Two Truths, One Lie
+
+Two Truths, One Lie includes:
+
+* Three-statement submission
+* Lie selection by the submitting player
+* Statement shuffling before display
+* Opponent guessing
+* Correct and incorrect result handling
+* Match history
+* Real-time chat
+* Turn timers
+* Reconnection handling
+
+## Technology Stack
+
+### Backend
+
+* Node.js
+* Express 5
+* Socket.IO 4
+* Multer
+* Node.js `fs`, `path`, and `http` modules
+
+### Frontend
+
+* HTML5
+* CSS3
+* Vanilla JavaScript
+* Bootstrap 5 on selected pages
+* Cropper.js
+* Socket.IO client
+
+### Current Data Storage
+
+* `users.json` stores account and profile data
+* `uploads/` stores profile and game images
+* Active lobby and game state is stored in server memory
+
+## Application Architecture
+
+```text
+Browser Clients
+      |
+      | HTTP
+      v
+Express Server
+      |
+      +--> Account and profile routes
+      +--> Image-upload routes
+      +--> Static frontend files
+      |
+      | Socket.IO
+      v
+Real-Time Game Systems
+      |
+      +--> Truth or Dare
+      +--> Would You Rather
+      +--> Two Truths, One Lie
+      |
+      +--> Lobby state
+      +--> Player state
+      +--> Turn state
+      +--> Timers
+      +--> Chat
+      +--> History
+      +--> Disconnect and reconnection logic
+```
+
+## Real-Time State Management
+
+Each game currently maintains its own Socket.IO event handlers and in-memory lobby collection.
+
+Depending on the game, the server manages:
+
+* Lobby creation and discovery
+* Password validation
+* Two-player capacity
+* Player identity
+* Turn ownership
+* Prompt and round state
+* Timers
+* Chat messages
+* Round or match history
+* Disconnect handling
+* Reconnection
+* Lobby deletion
+
+Active game data exists only while the server is running. Restarting the server clears active lobbies, connected-player state, turns, prompts, timers, chats, and round history.
+
+## Project Structure
+
+```text
 LoveLanguage/
 ├── app.js
 ├── package.json
@@ -161,339 +208,168 @@ LoveLanguage/
 ├── two_truths_one_lie.html
 ├── uploads/
 └── server.log
+```
 
-Important files
+### Important Files
 
-File
+| File                      | Purpose                                                                                       |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| `app.js`                  | Express routes, uploads, account logic, lobby state, Socket.IO events, timers, and game logic |
+| `index.html`              | Main game hub and lobby browser                                                               |
+| `create-account.html`     | Account registration                                                                          |
+| `signin.html`             | Sign-in interface                                                                             |
+| `profile.html`            | Profile viewing, editing, image upload, and image cropping                                    |
+| `truth_or_dare.html`      | Truth or Dare lobby and gameplay                                                              |
+| `would_you_rather.html`   | Would You Rather lobby and gameplay                                                           |
+| `two_truths_one_lie.html` | Two Truths, One Lie lobby and gameplay                                                        |
+| `users.json`              | Local account and profile storage                                                             |
+| `uploads/`                | Uploaded profile and game images                                                              |
 
-Purpose
+## Installation
 
-app.js
-
-Express server, upload routes, account routes, profile routes, lobby state, Socket.IO events, timers, and game logic
-
-index.html
-
-Main LoveLanguage game hub
-
-create-account.html
-
-Account-registration form
-
-signin.html
-
-Sign-in form
-
-profile.html
-
-Profile viewing, editing, image uploading, and image cropping
-
-truth_or_dare.html
-
-Truth or Dare lobby and game interface
-
-would_you_rather.html
-
-Would You Rather lobby and game interface
-
-two_truths_one_lie.html
-
-Two Truths, One Lie lobby and game interface
-
-users.json
-
-Local JSON account storage
-
-uploads/
-
-Uploaded profile pictures and game images
-
-server.log
-
-Previous server output and error logs
-
-Installation
-
-Prerequisites
+### Prerequisites
 
 Install a recent Node.js LTS release and npm.
 
 Verify the installation:
 
+```bash
 node --version
 npm --version
+```
 
-1. Clone or download the project
+### Clone the Project
 
+```bash
 git clone <your-repository-url>
-cd dare-game-backend
+cd <your-project-directory>
+```
 
-Replace <your-repository-url> with the repository URL.
+### Install Dependencies
 
-2. Install dependencies
-
+```bash
 npm install
+```
 
-The current dependencies are:
+Current backend dependencies include:
 
+```json
 {
   "express": "^5.1.0",
   "multer": "^1.4.5-lts.2",
   "socket.io": "^4.8.1"
 }
+```
 
-3. Create the user-data file
+### Create the User Data File
 
-Make sure a users.json file exists in the project root.
+Create `users.json` in the project root with a valid empty JSON array:
 
+```json
 []
+```
 
-The account-creation route reads this file directly, so beginning with a valid empty JSON array avoids startup and registration errors.
+### Start the Server
 
-4. Start the server
-
-The current package.json does not include a start script, so run:
-
+```bash
 node app.js
+```
 
-The server uses port 3000 unless the PORT environment variable is set.
+The server runs on port `3000` unless the `PORT` environment variable is set.
 
 Open:
 
+```text
 http://localhost:3000
+```
 
-Optional npm start script
+## Basic Usage
 
-Add this to the scripts section of package.json:
+1. Create an account.
+2. Sign in.
+3. Add optional profile information and images.
+4. Select a game from the hub.
+5. Create a public or private lobby.
+6. Have a second signed-in player join.
+7. Play using the turn controls and real-time chat.
 
-{
-  "scripts": {
-    "start": "node app.js"
-  }
-}
+Each lobby is designed for two active players.
 
-Then start the application with:
+## Selected HTTP Routes
 
-npm start
+| Method | Route                        | Purpose                                          |
+| ------ | ---------------------------- | ------------------------------------------------ |
+| `GET`  | `/`                          | Serves the main game hub                         |
+| `POST` | `/create-account`            | Creates an account and uploads a profile picture |
+| `POST` | `/sign-in`                   | Validates submitted credentials                  |
+| `GET`  | `/profile-data?username=...` | Returns profile data without the password field  |
+| `POST` | `/update-profile`            | Updates profile fields and images                |
+| `POST` | `/delete-extra-image`        | Removes a gallery image                          |
+| `POST` | `/upload`                    | Uploads an image used in a game response         |
 
-Basic usage
+## Engineering Challenges
 
-Open the game hub.
+### Synchronizing Shared Game State
 
-Create an account.
+Both players must see the same lobby, turn, timer, prompt, result, chat, and history state. Socket.IO events coordinate these updates between the server and each connected browser.
 
-Sign in.
+### Handling Disconnects and Reconnection
 
-Open your profile and add optional profile details or images.
+A reconnecting browser receives a new Socket.IO connection ID. The application therefore has to distinguish a returning player from a new player, restore the correct lobby relationship, and avoid incorrectly duplicating player state.
 
-Select a game from the hub.
+### Managing Multiple Game Flows
 
-Create a public or private lobby.
+Each game has different rules and state transitions:
 
-Have a second signed-in player join the lobby.
+* Truth or Dare tracks prompt type, proof images, streaks, and separate histories
+* Would You Rather tracks option selection and round outcomes
+* Two Truths, One Lie tracks statement submission, shuffling, lie selection, and guessing
 
-Play the game using the displayed turn controls.
+Supporting all three required separate event flows while preserving a consistent two-player lobby experience.
 
-Use the in-game chat to communicate.
+### Combining Persistent and Temporary Data
 
-The application is designed around two active players per lobby.
+Profile information and uploaded files remain after a restart, while active multiplayer state is intentionally temporary. This required separating saved account data from short-lived game state.
 
-Main HTTP routes
+## Current Limitations
 
-Method
+LoveLanguage is a prototype and is **not ready for public deployment with real user data**.
 
-Route
+Current limitations include:
 
-Purpose
+* Passwords are stored as plain text in `users.json`
+* Authentication is not backed by secure server-side sessions
+* The browser stores the username in `localStorage`
+* A user can modify local storage and impersonate another username
+* Lobby passwords are stored in server memory as plain text
+* Upload validation needs stronger size, extension, and MIME-type checks
+* Some frontend content uses `innerHTML` and requires stricter escaping
+* Active lobbies and game state are lost when the server restarts
+* `app.js` currently contains several unrelated systems
+* Some Socket.IO logic is duplicated across games
+* Event names and player-data shapes are not fully standardized
+* The project does not yet include automated tests
 
-GET
+Only test data should be used in the current version.
 
-/
+## Production Readiness Roadmap
 
-Serves the game hub
+The next major engineering steps are:
 
-POST
+1. Hash passwords with bcrypt
+2. Add session-based authentication with secure cookies
+3. Replace `users.json` with a database
+4. Add server-side authorization for profile updates
+5. Strengthen upload validation
+6. Standardize player and lobby data structures
+7. Remove duplicate Socket.IO handlers
+8. Split the server into routes, services, middleware, and game modules
+9. Add centralized error handling
+10. Add automated tests for accounts, profiles, lobbies, and gameplay
 
-/create-account
+A possible backend structure is:
 
-Creates a user account and uploads a profile picture
-
-POST
-
-/sign-in
-
-Checks submitted credentials
-
-GET
-
-/profile-data?username=...
-
-Returns profile data without the password field
-
-POST
-
-/update-profile
-
-Updates profile fields and uploaded images
-
-POST
-
-/delete-extra-image
-
-Removes an extra profile image
-
-POST
-
-/upload
-
-Uploads an image used by a game response
-
-Socket.IO systems
-
-The backend contains separate in-memory lobby collections and event handlers for:
-
-Truth or Dare
-
-Would You Rather
-
-Two Truths, One Lie
-
-Each system manages some combination of:
-
-Lobby creation
-
-Lobby discovery
-
-Joining
-
-Password validation
-
-Two-player capacity
-
-Player identity
-
-Turns
-
-Timers
-
-Chat
-
-History
-
-Disconnects
-
-Reconnection
-
-Lobby deletion
-
-Data behavior
-
-Persistent data
-
-The following data remains after restarting the server:
-
-Accounts stored in users.json
-
-Profile information stored in users.json
-
-Files stored in uploads/
-
-Temporary data
-
-The following data is stored only in memory and is lost when the server restarts:
-
-Active lobbies
-
-Connected players
-
-Current turns
-
-Active prompts
-
-Chat history
-
-Round history
-
-Timers
-
-Known limitations
-
-The current project is functional as a prototype, but it has several important limitations.
-
-Security
-
-Passwords are stored as plain text in users.json.
-
-Sign-in does not create a secure server-side session.
-
-Browser localStorage is used to remember the username.
-
-A user can edit localStorage manually and impersonate another username.
-
-Lobby passwords are stored in server memory as plain text.
-
-Uploaded files need stronger size, extension, and MIME-type validation.
-
-Some frontend content is inserted with innerHTML, which requires careful escaping to prevent cross-site scripting.
-
-Do not deploy this version publicly with real user information.
-
-Backend organization
-
-app.js contains account logic, upload logic, and three game servers in one large file.
-
-Some middleware and Socket.IO handlers are duplicated.
-
-Some events use inconsistent names between frontend and backend.
-
-Multiple disconnect handlers are registered.
-
-Some player collections use different data shapes.
-
-There is no automated test suite.
-
-Server-side errors can be difficult to trace because unrelated systems share the same file.
-
-Frontend organization
-
-Several pages contain duplicated JavaScript.
-
-Some scripts appear outside the <body> or <html> structure.
-
-Some pages rely on inline onclick handlers.
-
-Styling is inconsistent between games.
-
-A few elements and event listeners are duplicated.
-
-Some page titles and labels still use older project names.
-
-Recommended improvements
-
-High priority
-
-Hash passwords with bcrypt.
-
-Add session-based authentication with secure cookies.
-
-Move users from users.json to a database.
-
-Validate that the authenticated user owns the profile being edited.
-
-Add upload size and file-type restrictions.
-
-Remove duplicate Socket.IO event handlers.
-
-Standardize player objects across all games.
-
-Split app.js into routes, services, game modules, and utilities.
-
-Add centralized error handling.
-
-Add tests for account, profile, lobby, and game behavior.
-
-Suggested backend structure
-
+```text
 src/
 ├── server.js
 ├── routes/
@@ -512,105 +388,35 @@ src/
 │   └── upload.js
 └── utils/
     └── sanitize.js
+```
 
-Suggested production data model
+## Skills Demonstrated
 
-A future database version could include:
+* Node.js and Express backend development
+* Event-driven programming
+* Real-time communication with Socket.IO
+* Multiplayer lobby and turn-state management
+* Disconnect and reconnection handling
+* Client-server synchronization
+* File uploads with Multer
+* Browser image cropping and media workflows
+* REST-style HTTP route design
+* Vanilla JavaScript frontend development
+* Temporary and persistent state management
+* Technical documentation
+* Security-risk identification
+* Refactoring and production-readiness planning
 
-users
+## Current Status
 
-profiles
+LoveLanguage is a functional work-in-progress prototype for local development and testing.
 
-profile_images
+Its current value is as a demonstration of real-time multiplayer engineering, state synchronization, lobby lifecycle management, user profiles, media uploads, and the design challenges involved in moving a prototype toward a production architecture.
 
-lobbies
+## License
 
-lobby_players
+ISC
 
-game_rounds
-
-chat_messages
-
-Development notes
-
-The uploads/ directory is created automatically by the Multer storage configuration when an upload occurs.
-
-The server defaults to port 3000.
-
-Public and private lobbies use separate validation rules.
-
-Each game currently maintains its own Socket.IO event names and lobby state.
-
-The frontend expects the signed-in username to be available in localStorage.
-
-Profile links use a username query parameter and may include readonly=1.
-
-Troubleshooting
-
-callback is not a function
-
-Older server logs show Socket.IO handlers attempting to call a callback that the client did not provide. Check every handler that accepts an acknowledgment callback:
-
-socket.on('someEvent', (data, callback) => {
-  if (typeof callback === 'function') {
-    callback({ success: true });
-  }
-});
-
-A player is already registered
-
-Clear or update disconnected player state before treating a reconnection as a new player. A reconnecting player receives a new Socket.IO ID.
-
-Lobby does not appear
-
-Confirm that:
-
-The frontend emits the correct lobby-list request event.
-
-The backend listens for the same event name.
-
-The backend broadcasts the event name expected by that game's page.
-
-The lobby is public if it is supposed to appear in the public list.
-
-Profile image does not load
-
-Confirm that:
-
-The file exists inside uploads/.
-
-The saved filename matches the value in users.json.
-
-Express is serving the directory containing uploads/.
-
-The image URL begins with /uploads/.
-
-Account creation fails
-
-Confirm that:
-
-users.json exists.
-
-users.json contains valid JSON.
-
-The file begins as [] when empty.
-
-Every required form field is submitted.
-
-A profile image is selected.
-
-The account form begins with a valid <form> tag.
-
-Privacy warning
-
-The application accepts personal profile information, chat messages, and uploaded images. In its current form, it does not provide production-grade authentication, authorization, encryption, moderation, retention controls, or privacy protections.
-
-Use test data only until those systems are implemented.
-
-License
-
-This project currently uses the ISC license, as declared in package.json.
-
-Author
+## Author
 
 Aiden Figueroa
